@@ -95,7 +95,7 @@ cbar = fig.colorbar(sm, ax=ax, orientation='horizontal', fraction=0.05, pad=0.05
 cbar.set_label('$log_{10}$(Cumulative Missing Person Cases) (1969–2024)', fontsize=12)
 
 ax.set_title(
-    "$log_{10}$(Cumulative NamUs Missing Person Cases) by County (Continental U.S., 1969–2024)",
+    "Cumulative NamUs Missing Person Cases by County (Continental U.S., 1969–2024)",
     fontsize=24,
     fontweight='bold'
 )
@@ -185,7 +185,7 @@ cbar.set_label(
 )
 
 ax.set_title(
-    "$log_{10}$(Cumulative NamUs Missing Person Cases) by State "
+    "Cumulative NamUs Missing Person Cases by State "
     "(Continental U.S., 1969–2024)",
     fontsize=24,
     fontweight='bold'
