@@ -93,7 +93,7 @@ df_namus = df_namus[
 # ===============================
 df_namus['Year'] = df_namus['DisappearanceDate'].dt.year
 df_namus.loc[df_namus['Year'] < 1969, 'Year'] = 1969
-# df_namus.loc[df_namus['Year'] > 2024, 'Year'] = 2024
+df_namus.loc[df_namus['Year'] > 2024, 'Year'] = 2024
 df_namus['Year'] = df_namus['Year'].astype(int)
 
 
@@ -135,7 +135,6 @@ df_namus.loc[ct_mask, 'County'] = mapped_ct.combine_first(df_namus.loc[ct_mask, 
 # 
 # ===============================
 dropped_states = {
-    'ALASKA',
     'PUERTO RICO',
     'VIRGIN ISLANDS',
     'GUAM',
@@ -159,22 +158,11 @@ df_namus = df_namus[
     df_namus['County'].notna() &
     (~df_namus['County'].isin(bad_values))
 ].copy()
- 
-#  50 total cases from the scraped NamUs db file are missing 'County' entries 
-
-# ===============================
-# Final year filter
-# ===============================
-# df_namus = df_namus[
-#     (df_namus['Year'] >= 2000) &
-#     (df_namus['Year'] <= 2024)
-# ].copy()
 
 
 # ===============================
 # Export final NamUs cases
-# Total Cases: 25630
-# Cumulative Cases[2000-2024]: 16701
+# Total Cases: 25532
 # ===============================
 df_namus.to_csv( r'F:\dsl_CLIMA\projects\submittable\missing persons\export\namus_cases.csv', index=False)
 
