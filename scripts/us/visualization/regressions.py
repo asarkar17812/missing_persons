@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import statsmodels.api as sm
 
-df_primary = pd.read_csv(r'F:\dsl_CLIMA\projects\submittable\missing persons\export\mp_term.csv')
+df_primary = pd.read_csv(r'export/mp_term.csv')
 df_primary['DisappearanceDate'] = pd.to_datetime(df_primary['DisappearanceDate'])
 
 df_primary = df_primary[

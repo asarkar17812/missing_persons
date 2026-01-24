@@ -2,13 +2,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 df_namus = pd.read_csv(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\export\mp_term.csv'
+    r'export/mp_term.csv'
 )
 
 df_namus['DisappearanceDate'] = pd.to_datetime(df_namus['DisappearanceDate'])
 
 df_namus = df_namus[
-    (df_namus['DisappearanceDate'] > pd.to_datetime('1968-12-31')) &
+    (df_namus['DisappearanceDate'] > pd.to_datetime('2009-12-31')) &
     (df_namus['DisappearanceDate'] < pd.to_datetime('2025-01-01'))
 ]
 
@@ -65,7 +65,7 @@ for bar, label in zip(bars, eth_percent_grouped.index):
 
 ax.set_xlabel("Percent of Total (%)")
 ax.set_title(
-    f"Ethnicity Distribution of Cumulative NamUs Missing Persons[1969-2024] Cases\n(N = {n_eth:,} cases)",
+    f"Ethnicity Distribution of Cumulative NamUs Missing Persons [2010-2024] Cases\n(N = {n_eth:,} cases)",
     fontsize=14,
     fontweight='bold'
 )
@@ -74,7 +74,7 @@ ax.set_xlim(0, eth_percent_grouped.max() * 1.25)
 
 plt.tight_layout()
 plt.savefig(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\regressions\demographics\mp_ethnicity_bar.png',
+    r'plots/demographics/[2010-2024]/[2010-2024]_mp_ethnicity_bar.png',
     dpi=1200,
     bbox_inches='tight'
 )

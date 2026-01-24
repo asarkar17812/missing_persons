@@ -9,16 +9,24 @@ from matplotlib.colors import LogNorm
 # --------------------------------------------------
 
 df_namus = pd.read_csv(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\export\mp_term.csv'
+    r'export/mp_term.csv'
 )
 
 gdf_2024 = gpd.read_file(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\source\shape files\2024\counties\tl_2024_us_county.shp'
+    r'source/shape files/2024/counties/tl_2024_us_county.shp'
 )
 
 gdf_states_2024 = gpd.read_file(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\source\shape files\2024\states\tl_2024_us_state.shp'
+    r'source/shape files/2024/states/tl_2024_us_state.shp'
 )
+
+
+df_namus['DisappearanceDate'] = pd.to_datetime(df_namus['DisappearanceDate'])
+
+df_namus = df_namus[
+    (df_namus['DisappearanceDate'] > pd.to_datetime('2009-12-31')) &
+    (df_namus['DisappearanceDate'] < pd.to_datetime('2025-01-01'))
+]
 
 gdf_2024['GEOID'] = gdf_2024['GEOID'].astype(str)
 gdf_2024['STATEFP'] = gdf_2024['STATEFP'].astype(str)
@@ -92,10 +100,10 @@ ax.set_ylim([24, 50])     # latitude
 sm = plt.cm.ScalarMappable(cmap='viridis', norm=norm)
 sm._A = []  # dummy array for ScalarMappable
 cbar = fig.colorbar(sm, ax=ax, orientation='horizontal', fraction=0.05, pad=0.05)
-cbar.set_label('$log_{10}$(Cumulative Missing Person Cases) (1969–2024)', fontsize=12)
+cbar.set_label('$log_{10}$(Cumulative Missing Person Cases) (2010–2024)', fontsize=12)
 
 ax.set_title(
-    "Cumulative NamUs Missing Person Cases by County (Continental U.S., 1969–2024)",
+    "Cumulative NamUs Missing Person Cases by County (Continental U.S., 2010-2024)",
     fontsize=24,
     fontweight='bold'
 )
@@ -104,7 +112,7 @@ ax.axis('off')
 
 plt.tight_layout()
 plt.savefig(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\demographics\[1969-2024]_mp_county_choropleth.png',
+    r'plots/demographics/[2010-2024]/[2010-2024]_mp_county_choropleth.png',
     dpi=1200,
     bbox_inches='tight'
 )
@@ -180,13 +188,13 @@ cbar = fig.colorbar(
     pad=0.05
 )
 cbar.set_label(
-    '$log_{10}$(Cumulative Missing Person Cases) (1969–2024)',
+    '$log_{10}$(Cumulative Missing Person Cases) (2010–2024)',
     fontsize=12
 )
 
 ax.set_title(
     "Cumulative NamUs Missing Person Cases by State "
-    "(Continental U.S., 1969–2024)",
+    "(Continental U.S., 2010–2024)",
     fontsize=24,
     fontweight='bold'
 )
@@ -195,7 +203,7 @@ ax.axis('off')
 
 plt.tight_layout()
 plt.savefig(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\demographics\[1969-2024]_mp_state_choropleth.png',
+    r'plots/demographics/[2010-2024]/[2010-2024]_mp_state_choropleth.png',
     dpi=1200,
     bbox_inches='tight'
 )
