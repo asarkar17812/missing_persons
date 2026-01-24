@@ -5,15 +5,6 @@
 
 The Missing Persons (MP) project is an attempt to understand the underlying similarities in the rate of missing persons versus population. 
 
-
-
-
-
-
-
-
-
-
 ---
 
 # Missing Persons & Population Data Sources
