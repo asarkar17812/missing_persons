@@ -8,31 +8,54 @@ df_primary = pd.read_csv(r'export/mp_term.csv')
 df_primary['DisappearanceDate'] = pd.to_datetime(df_primary['DisappearanceDate'])
 
 df_primary = df_primary[
-    (df_primary['DisappearanceDate'] > pd.to_datetime('2009-12-31')) &
+    (df_primary['DisappearanceDate'] > pd.to_datetime('1968-12-31')) &
     (df_primary['DisappearanceDate'] < pd.to_datetime('2025-01-01'))
 ]
 
+df_counties = df_primary.groupby('FIPS').agg(
+    Case_Count=('CaseID','count'),
+    County_Title=('County','last'),
+    County_pop=('County_pop','last')
+)
+
 df_msa = df_primary.groupby('MSA Code').agg(
     Case_Count=('CaseID', 'count'),      # count the number of rows per MSA
-    MSA_Title=('MSA Title', 'first'),   # take the first MSA Title
-    CBSA_Type=('CBSA Type', 'first'),    # take the first CBSA Type (or whatever column you meant by 'MSA Type')
+    MSA_Title=('MSA Title', 'last'),   # take the last MSA Title
+    CBSA_Type=('CBSA Type', 'last'),    # take the last CBSA Type 
     MSA_pop=('MSA_pop', 'last')
-).reset_index()
+).reset_index().copy()
+
+df_csa = df_primary.groupby('CSA Code').agg(
+    Case_Count=('CaseID','count'),
+    CSA_Title=('CSA Title', 'first'),
+    CSA_Type=('CSA Type', 'first'),
+    CSA_pop=('CSA_pop','last')
+).reset_index().copy()
 
 # --- Clean and prepare data
+df_counties = df_counties[(df_counties['Case_Count'] > 0) & (df_counties['County_pop'] > 0)].dropna()
+df_counties['log_cases'] = np.log10(df_counties['Case_Count'])
+df_counties['log_pop'] = np.log10(df_counties['County_pop'])
+
+df_csa = df_csa[(df_csa['Case_Count'] > 0) & (df_csa['CSA_pop'] > 0)].dropna()
+df_csa['log_cases'] = np.log10(df_csa['Case_Count'])
+df_csa['log_pop'] = np.log10(df_csa['CSA_pop'])
+
 df_msa = df_msa[(df_msa['Case_Count'] > 0) & (df_msa['MSA_pop'] > 0)].dropna()
 df_msa['log_cases'] = np.log10(df_msa['Case_Count'])
 df_msa['log_pop'] = np.log10(df_msa['MSA_pop'])
 
 # Subsets
 datasets = {
-    'All CBSAs': df_msa,
+    'Counties': df_counties,
+    'CSAs': df_csa,
+    'CBSAs': df_msa,
     'MSAs': df_msa[df_msa['CBSA_Type'] == 'MSA'],
     'MicroSAs': df_msa[df_msa['CBSA_Type'] == 'MicroSA'],
 }
 
 # --- Plot setup
-fig, axes = plt.subplots(1, 3, figsize=(20, 8), sharey=True)
+fig, axes = plt.subplots(1, 5, figsize=(24, 8), sharey=True)
 
 for ax, (title, df) in zip(axes, datasets.items()):
     # Fit log-log regression
@@ -59,7 +82,7 @@ for ax, (title, df) in zip(axes, datasets.items()):
     median_log_cases = df['log_cases'].median()
 
     # Plotting
-    ax.scatter(df['log_pop'], df['log_cases'], color='steelblue', alpha=0.7, label='$log_{10}$(Number of Cases per CBSA)')
+    ax.scatter(df['log_pop'], df['log_cases'], color='steelblue', alpha=0.7, label='$log_{10}$(Number of Cases)')
     ax.plot(x_vals, y_vals, color='darkred', linewidth=2, label='Regression line')
     ax.fill_between(x_vals, preds_ci['mean_ci_lower'], preds_ci['mean_ci_upper'],
                     color='lightcoral', alpha=0.3, label='95% CI band')
@@ -84,12 +107,14 @@ for ax, (title, df) in zip(axes, datasets.items()):
     ax.set_xlim(left=0)
     ax.set_ylim(bottom=0)
 
-axes[0].set_ylabel('log(NamUS Case Counts)\n[2010–2024]', fontsize=20)
-axes[0].set_xlabel('log(CBSA Population)', fontsize=20)
-axes[1].set_xlabel('log(MSA Population)', fontsize=20)
-axes[2].set_xlabel('log(MicroSA Population)', fontsize=20)
+axes[0].set_ylabel('log(NamUS Case Counts)\n[1969–2024]', fontsize=20)
+axes[0].set_xlabel('log(County Population)', fontsize=20)
+axes[1].set_xlabel('log(CBSA Population)', fontsize=20)
+axes[2].set_xlabel('log(MSA Population)', fontsize=20)
+axes[3].set_xlabel('log(MicroSA Population)', fontsize=20)
+axes[4].set_xlabel('log(CSA Population)', fontsize=20)
 
-fig.suptitle('Scaling Exponent (β) of Missing Persons Cases vs Population for CBSAs [2010–2024]', fontsize=28)
+fig.suptitle('Scaling Exponent (β) of NamUs Missing Persons Cases vs GEOID Population [1969–2024]', fontsize=28)
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.show()
-fig.savefig(r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\regressions\[2010-2024]regressions.png', dpi=1200, bbox_inches='tight')
+fig.savefig(r'plots/regressions/cumulative/[1969-2024]regressions.png', dpi=1500, bbox_inches='tight')
