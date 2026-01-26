@@ -107,12 +107,12 @@ for ax, (title, df) in zip(axes, datasets.items()):
     ax.set_xlim(left=0)
     ax.set_ylim(bottom=0)
 
-axes[0].set_ylabel('log(NamUS Case Counts)\n[1969–2024]', fontsize=20)
+axes[0].set_ylabel('log(NamUS Case Counts)\n[1969-2024]', fontsize=20)
 axes[0].set_xlabel('log(County Population)', fontsize=20)
-axes[1].set_xlabel('log(CBSA Population)', fontsize=20)
-axes[2].set_xlabel('log(MSA Population)', fontsize=20)
-axes[3].set_xlabel('log(MicroSA Population)', fontsize=20)
-axes[4].set_xlabel('log(CSA Population)', fontsize=20)
+axes[1].set_xlabel('log(CSA Population)', fontsize=20)
+axes[2].set_xlabel('log(CBSA Population)', fontsize=20)
+axes[3].set_xlabel('log(MSA Population)', fontsize=20)
+axes[4].set_xlabel('log(MicroSA Population)', fontsize=20)
 
 fig.suptitle('Scaling Exponent (β) of NamUs Missing Persons Cases vs GEOID Population [1969–2024]', fontsize=28)
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])

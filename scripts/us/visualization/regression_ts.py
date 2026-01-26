@@ -35,22 +35,22 @@ cumulative_to_plot = cumulative_disappearances[cumulative_disappearances.index >
 # --- January data points for markers
 january_points = cumulative_to_plot[cumulative_to_plot.index.month == 1]
 
-# # --- Plot cumulative monthly cases (for visualization only)
-# plt.figure(figsize=(14, 10))
-# plt.plot(cumulative_to_plot.index, cumulative_to_plot.values,
-#          color='darkgreen', linewidth=2, label='Cumulative NamUS Missing Persons Cases (1969–2024)')
-# plt.title('Cumulative NamUS Missing Persons Cases by Month Start (1969–2024)', fontsize=24)
-# plt.xlabel('Year', fontsize=20)
-# plt.ylabel('Cumulative NamUS Missing Persons Cases', fontsize=28)
-# plt.grid(False)
-# plt.xticks(ticks=january_points.index, labels=[d.strftime('%Y') for d in january_points.index], fontsize=18, rotation=55)
-# y_ticks = [0, 1969, 4000, 6000, 8000, 10000, 11969, 14000, 16000]
-# plt.yticks(y_ticks, fontsize=14)
-# plt.ylim(y_ticks[0] + .5)
-# plt.xlim(all_months[0], all_months[-1])
-# plt.tight_layout()
-# # plt.savefig(r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\regressions\temporal\[1969-2024]cumulative_cases.png', dpi=1200, bbox_inches='tight')
-# plt.show()
+# --- Plot cumulative monthly cases (for visualization only)
+plt.figure(figsize=(14, 10))
+plt.plot(cumulative_to_plot.index, cumulative_to_plot.values,
+         color='darkgreen', linewidth=2, label='Cumulative NamUS Missing Persons Cases (1969–2024)')
+plt.title('Cumulative NamUS Missing Persons Cases by Month Start (1969–2024)', fontsize=24)
+plt.xlabel('Year', fontsize=20)
+plt.ylabel('Cumulative NamUS Missing Persons Cases', fontsize=28)
+plt.grid(False)
+plt.xticks(ticks=january_points.index, labels=[d.strftime('%Y') for d in january_points.index], fontsize=14, rotation=60)
+y_ticks = [0, 2000, 4000, 6000, 8000, 10000, 11969, 14000, 16000, 18000, 20000, 22000, 24000]
+plt.yticks(y_ticks, fontsize=14)
+plt.ylim(y_ticks[0] + .5)
+plt.xlim(all_months[0], all_months[-1])
+plt.tight_layout()
+plt.savefig(r'plots/regressions/temporal/counties/[1969-2024]/[1969-2024]cumulative_cases.png', dpi=1200, bbox_inches='tight')
+plt.show()
 
 # --- Regression: annual new cases
 df = df_primary.copy()
