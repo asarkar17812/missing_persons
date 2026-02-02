@@ -37,9 +37,8 @@ def normalize_state_name(s):
 
     return canonical_map.get(s, s)
 
-
-
-df_inegi = pd.read_csv(r'source/mexico_missing_persons/data.csv', dtype=str)
+df_inegi = pd.read_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/source/mexico_missing_persons/data.csv', dtype=str)
+df_poblacion = pd.read_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/export/poblacion.csv', dtype=str)
 
 # def print_unknown_confidential_counts(df):
 #     for col in df.columns:
@@ -175,5 +174,106 @@ plot_valid_entries_choropleth_shp(
     ],
     special_values=['UNKNOWN'],
     shapefile_path=r'source/shape files/mexico/mexican-states.shp',
+    shapefile_state_col='name'
+)
+
+def plot_population_choropleth_shp(
+    df,
+    state_col='STATE',
+    pop_col='State_pop',
+    shapefile_path=None,
+    shapefile_state_col='name',
+    log_scale=True
+):
+    if shapefile_path is None:
+        raise ValueError("Please provide the path to a .shp file.")
+
+    # --- copy & clean ---
+    df = df.copy()
+    df[state_col] = df[state_col].apply(normalize_state_name)
+    df[pop_col] = pd.to_numeric(df[pop_col], errors='coerce')
+
+    # Drop missing population
+    df = df.dropna(subset=[pop_col])
+
+    # --- load shapefile ---
+    gdf = gpd.read_file(shapefile_path)
+    gdf[shapefile_state_col] = gdf[shapefile_state_col].apply(normalize_state_name)
+
+    # --- merge ---
+    merged = gdf.merge(
+        df[[state_col, pop_col]],
+        left_on=shapefile_state_col,
+        right_on=state_col,
+        how='left'
+    )
+
+    # --- handle log scale ---
+    vmin = merged[pop_col].min()
+    vmax = merged[pop_col].max()
+
+    if log_scale:
+        norm = LogNorm(vmin=vmin, vmax=vmax)
+        legend_label = '2025 Mexican State Population (Log Scaled)'
+    else:
+        norm = None
+        legend_label = '2025 Mexican State Population'
+
+    # --- plot ---
+    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+    merged.plot(
+        column=pop_col,
+        ax=ax,
+        cmap='viridis',
+        edgecolor='black',
+        linewidth=0.6,
+        norm=norm,
+        legend=True,
+        legend_kwds={
+            'label': legend_label,
+            'orientation': 'horizontal',
+            'fraction': 0.05,
+            'pad': 0.02
+        }
+    )
+
+    # --- colorbar formatting (log) ---
+    if log_scale:
+        cbar = ax.get_figure().axes[-1]
+        min_exp = int((np.log10(1000000)))
+        max_exp = int((np.log10(vmax)))
+        major_ticks = [10**i for i in range(min_exp, max_exp + 1)]
+
+        cbar.set_xticks(major_ticks)
+        cbar.xaxis.set_major_formatter(
+            FuncFormatter(lambda x, _: f"$10^{{{int(np.log10(x))}}}$")
+        )
+        cbar.xaxis.set_minor_locator(
+            LogLocator(base=10.0, subs=np.arange(2, 10) * 0.1)
+        )
+        cbar.xaxis.set_minor_formatter(FuncFormatter(lambda x, _: ''))
+        cbar.tick_params(axis='x', labelsize=14)
+        cbar.set_xlabel(legend_label, fontsize=18)
+
+    # --- aesthetics ---
+    ax.set_title(
+        "2025 Mexican State Population Choropleth (Log Scaled)",
+        fontsize=24
+    )
+    ax.axis('off')
+
+    plt.tight_layout(rect=[0, 0.1, 1, 1])
+    plt.savefig(
+        '/Users/ayushsarkar/missing_persons/missing_persons/plots/mexico/state_population_choropleth.png',
+        dpi=1500,
+        bbox_inches='tight'
+    )
+    plt.show()
+
+plot_population_choropleth_shp(
+    df=df_poblacion,
+    state_col='entidad',
+    pop_col='Total',
+    shapefile_path=r'/Users/ayushsarkar/missing_persons/missing_persons/source/shape files/mexico/mexican-states.shp',
     shapefile_state_col='name'
 )
