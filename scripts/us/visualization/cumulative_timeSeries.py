@@ -2,8 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-df_primary = pd.read_csv(r'F:\dsl_CLIMA\projects\submittable\missing persons\export\mp_term.csv')
-df_msa = pd.read_csv(r'F:\dsl_CLIMA\projects\Missing Persons Project\msa_cases_by_MSAcode[2010-2024].csv')
+df_primary = pd.read_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/export/mp_term.csv')
+# df_msa = pd.read_csv(r'F:\dsl_CLIMA\projects\Missing Persons Project\msa_cases_by_MSAcode[2010-2024].csv')
 
 # --- Prepare and clean data
 df_primary['DisappearanceDate'] = pd.to_datetime(df_primary['DisappearanceDate'], errors='coerce')
@@ -35,5 +35,5 @@ ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # e.g., Jan 2020
 plt.xticks(rotation=45, fontsize=16)
 plt.yticks(fontsize=18)
 plt.tight_layout()
-plt.savefig(r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\regressions\cumulative_cbsa\[2000-2024]cpm_ts_cases.png', dpi=1200, bbox_inches='tight')
+# plt.savefig(r'F:\dsl_CLIMA\projects\submittable\missing persons\plots\regressions\cumulative_cbsa\[2000-2024]cpm_ts_cases.png', dpi=1200, bbox_inches='tight')
 plt.show()

@@ -4,13 +4,13 @@ import geopandas as gpd
 
 # --- Load files ---
 df_population = pd.read_csv(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\export\population.csv',
+    r'/Users/ayushsarkar/missing_persons/missing_persons/export/population.csv',
     dtype={'FIPS': str}
 )
 df_namus = pd.read_csv(
-    r'F:\dsl_CLIMA\projects\submittable\missing persons\export\namus_cases.csv'
+    r'/Users/ayushsarkar/missing_persons/missing_persons/export/namus_cases.csv'
 )
-crosswalk_file = r'F:\dsl_CLIMA\projects\Missing Persons Project\working_dfs\qcew-county-msa-csa-crosswalk.xlsx'
+crosswalk_file = r'/Users/ayushsarkar/missing_persons/missing_persons/source/crosswalk/qcew-county-msa-csa-crosswalk.xlsx'
 
 # --- Helper functions ---
 bad_values = {'MISSING', 'UNKNOWN', 'CENSORED'}
@@ -156,6 +156,14 @@ def summarize_population_by_csa_all_years(df):
           .reset_index(drop=True)
     )
 
+def summarize_population_by_state_all_years(df):
+    return (
+        df.groupby(['Year', 'State'], as_index=False)
+          .agg(State_pop=('Population', 'sum'))
+          .sort_values(['Year', 'State'])
+          .reset_index(drop=True)
+    )
+
 def simplify_titles(df):
     if 'MSA Title' in df.columns:
         df['CBSA Type'] = df['MSA Title'].astype(str).str.extract(r'(\w+)$')[0].replace('nan', np.nan)
@@ -195,12 +203,14 @@ df_pop_final = pd.concat([
 
 df_cbsa = summarize_population_by_msa_all_years(df_pop_final)
 df_csa = summarize_population_by_csa_all_years(df_pop_final)
+df_state = summarize_population_by_state_all_years(df_pop_final)
 
 # --- Summarize populations ---
 df_pop_final = (
     df_pop_final
     .merge(df_cbsa, on=['Year', 'MSA Code'], how='left')
     .merge(df_csa, on=['Year', 'CSA Code'], how='left')
+    .merge(df_state, on=['Year', 'State'], how='left')
     .rename(columns={'Population': 'County_pop'})
 ).copy()
 
@@ -208,12 +218,12 @@ df_pop_final = simplify_titles(df_pop_final)
 
 # --- Merge population ---
 df_namus = df_namus.merge(
-    df_pop_final[['FIPS', 'Year', 'County_pop', 'name', 'source', 'State', 'MSA Code', 'CSA Code', 'MSA Title', 'CSA Title', 'MSA_pop', 'CSA_pop', 'CBSA Type', 'CSA Type', 'County_norm', 'State_norm']],
+    df_pop_final[['FIPS', 'Year', 'County_pop', 'name', 'source', 'State', 'MSA Code', 'CSA Code', 'MSA Title', 'CSA Title', 'MSA_pop', 'CSA_pop', 'State_pop', 'CBSA Type', 'CSA Type', 'County_norm', 'State_norm']],
     on=['Year', 'County_norm', 'State_norm'],
     how='left'
 ).drop_duplicates()
 
-df_namus = df_namus[['CaseID','CurrentMinAge','CurrentMaxAge','Sex','Ethnicity','DisappearanceDate','City','State_x','County','Year','FIPS','County_pop','MSA Code','CSA Code','MSA Title','CSA Title','MSA_pop','CSA_pop','CBSA Type','CSA Type']]
+df_namus = df_namus[['CaseID','CurrentMinAge','CurrentMaxAge','Sex','Ethnicity','DisappearanceDate','City','State_x','County','Year','FIPS','County_pop','MSA Code','CSA Code','MSA Title','CSA Title','MSA_pop','CSA_pop', 'State_pop', 'CBSA Type','CSA Type']]
 df_namus = df_namus.rename(columns={'State_x': 'State'})
 # --- Filter years and drop territories ---
 # df_namus = df_namus[(df_namus['Year'] > 1999) & (df_namus['Year'] < 2025)]
@@ -222,10 +232,10 @@ df_namus = df_namus.rename(columns={'State_x': 'State'})
 df_namus = df_namus[df_namus['FIPS'].notna()].copy()
 
 # --- Export ---
-df_namus.to_csv(r'F:\dsl_CLIMA\projects\submittable\missing persons\export\mp_term.csv', index=False)
+df_namus.to_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/export/mp_term.csv', index=False)
 
-df_pop_final = df_pop_final[['FIPS', 'Year', 'County_pop', 'name', 'source', 'State', 'MSA Code', 'CSA Code', 'MSA Title', 'CSA Title', 'MSA_pop', 'CSA_pop', 'CBSA Type', 'CSA Type']]
-df_pop_final.to_csv(r'F:\dsl_CLIMA\projects\submittable\missing persons\export\pop_term.csv', index=False)
+df_pop_final = df_pop_final[['FIPS', 'Year', 'County_pop', 'name', 'source', 'State', 'MSA Code', 'CSA Code', 'MSA Title', 'CSA Title', 'MSA_pop', 'CSA_pop', 'State_pop', 'CBSA Type', 'CSA Type']]
+df_pop_final.to_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/export/pop_term.csv', index=False)
 
 print("Final row count:", len(df_namus))
 print(df_namus.isna().sum())

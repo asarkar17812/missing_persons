@@ -1,9 +1,17 @@
 # Scaling of Missing Persons, International Comparisons, Time-series,...
+
 ## Ayush Sarkar 7/12/2025 - 8/06/2025 | MP w/ Dynamical Systems Lab @ NYU
-### Objectives: 
+
+### Objectives:
+
 ---
 
-The Missing Persons (MP) project is an attempt to understand the underlying similarities in the rate of missing persons versus population. 
+The Missing Persons (MP) project is an attempt to understand the underlying similarities in the rate of missing persons versus population across different countries. This project was born out of the interest to understand the evolution of missing persons cases specifically in Mexico, both over time and cumulatively, as Mexico faces one of the biggest missing persons crises globally. While other counties, like India, also struggle with the number of missing persons cases, the available data for other countries, makes it difficult to accurately understand the scaling patterns. Furthermore, the amount of censorship makes it difficult to recover the data in a meaninful way, further disrupting any conclusions that we could potentially make. That being said, the estimates and figures presented in this repository are based on the United States's NamUs Missing Persons database and Mexican INEGI database; about 40% of the Mexican INEGI database entries have missing/censored "Date of Incidence" entries, which makes it difficult to attribute cases to any specific year, and so, that is why there is no time-series figures available for Mexican INEGI cases. Similarly, about 41% of Mexican INEGI cases are missing a "Municipality" entry, which means that we cannot correctly aggregate Municipal-level case sums. Regardless, 
+
+To learn more about the methodology and to run the code, please open mp.ipynb
+
+
+
 
 ---
 
@@ -14,19 +22,12 @@ The Missing Persons (MP) project is an attempt to understand the underlying simi
 ## United States Missing Persons & Population Data
 
 ### Census & Population Data
-- **University of Brown’s Guide to Census Data**  
-  https://libguides.brown.edu/census/histmicro
 
-- **US Census Population Estimates by County (1969–2022)**  
-  https://seer.cancer.gov/popdata.thru.2022/download.html
-
-- **SEER FIPS Updates (1969–2022)**  
-  https://seer.cancer.gov/seerstat/variables/countyattribs/time-dependent.html
-
-- **David Dorn FIPS Updates (1980–2021)**  
-  https://www.ddorn.net/data/FIPS_County_Code_Changes.pdf
-
-- **NHGIS – Historical Shapefiles**  
+- **University of Brown’s Guide to Census Data** https://libguides.brown.edu/census/histmicro
+- **US Census Population Estimates by County (1969–2022)** https://seer.cancer.gov/popdata.thru.2022/download.html
+- **SEER FIPS Updates (1969–2022)** https://seer.cancer.gov/seerstat/variables/countyattribs/time-dependent.html
+- **David Dorn FIPS Updates (1980–2021)** https://www.ddorn.net/data/FIPS_County_Code_Changes.pdf
+- **NHGIS – Historical Shapefiles**
   https://data2.nhgis.org/main
 
 ---
@@ -34,26 +35,23 @@ The Missing Persons (MP) project is an attempt to understand the underlying simi
 ### Missing Persons Scrapers & Tools
 
 #### NightOwlRecon (NamUS Data)
-- **GitHub Repository**  
-  https://github.com/NightOwlRecon/NamUs-Data/blob/main/namus.py
 
-- **Extracted `.json` Dataset**  
+- **GitHub Repository**https://github.com/NightOwlRecon/NamUs-Data/blob/main/namus.py
+- **Extracted `.json` Dataset**
   https://drive.google.com/file/d/1k8PRzRlwE_Ti52enW4qjNX0bInr5Pf0g/view?usp=sharing
 
 #### Prepager (NamUS Scraper)
-- **GitHub Repository**  
+
+- **GitHub Repository**
   https://github.com/Prepager/namus-scraper
 
 ---
 
 ### Crosswalks & Spatial References
-- **Historical County / MSA / CSA Crosswalks (BLS)**  
-  https://www.bls.gov/cew/classifications/areas/county-msa-csa-crosswalk.htm
 
-- **Connecticut Town Crosswalks (2023–Present)**  
-  https://data.ct.gov/Local-Government/Connecticut-Towns-Crosswalk-with-Tax-Codes-and-FIP/5hqs-h5c3/about_data
-
-- **Connecticut FIPS Codes for Planning Regions (AP Elections API)**  
+- **Historical County / MSA / CSA Crosswalks (BLS)** https://www.bls.gov/cew/classifications/areas/county-msa-csa-crosswalk.htm
+- **Connecticut Town Crosswalks (2023–Present)** https://data.ct.gov/Local-Government/Connecticut-Towns-Crosswalk-with-Tax-Codes-and-FIP/5hqs-h5c3/about_data
+- **Connecticut FIPS Codes for Planning Regions (AP Elections API)**
   https://developer.ap.org/ap-elections-api/docs/CT_FIPS_Codes_forPlanningRegions.htm
 
 ---
@@ -61,46 +59,39 @@ The Missing Persons (MP) project is an attempt to understand the underlying simi
 ## South American & Latin American Missing Persons Data
 
 ### Mexico
-- **INEGI Missing & Unaccounted-for Persons Dataset**  
-  https://figshare.com/articles/dataset/Missing_and_Unaccounted-for_People_in_Mexico_1960s_2025_/28283000
 
-- **Governmental Crime & Missing Persons Report**  
+- **INEGI Missing & Unaccounted-for Persons Dataset** https://figshare.com/articles/dataset/Missing_and_Unaccounted-for_People_in_Mexico_1960s_2025_/28283000
+- **Governmental Crime & Missing Persons Report**
   https://www.gob.mx/sesnsp/acciones-y-programas/incidencia-delictiva-del-fuero-comun-nueva-metodologia
 
 ### New Mexico
-- **INEGI Missing Persons (ELCRI)**  
+
+- **INEGI Missing Persons (ELCRI)**
   https://elcri.men/en/about/
 
 ### Colombia
-- **SIEDCO Missing Persons Statistics (National Police)**  
+
+- **SIEDCO Missing Persons Statistics (National Police)**
   https://www.policia.gov.co/estadistica-delictiva
 
 ### Argentina
-- **Personas Perdidas**  
-  http://personasperdidas.org.ar/looking_for_their_families
 
-- **Police Reports (2020–2024)**  
-  https://www.datos.gob.ar/dataset/justicia-lucha-contra-trata-personas---llamados-linea-145---denuncias/archivo/justicia_4b786057-973f-4bd6-9594-8b74233ad9b1
-
-- **Federal System for Searching for Missing and Lost Persons – Management Report**  
+- **Personas Perdidas**http://personasperdidas.org.ar/looking_for_their_families
+- **Police Reports (2020–2024)** https://www.datos.gob.ar/dataset/justicia-lucha-contra-trata-personas---llamados-linea-145---denuncias/archivo/justicia_4b786057-973f-4bd6-9594-8b74233ad9b1
+- **Federal System for Searching for Missing and Lost Persons – Management Report**
   https://www.argentina.gob.ar/sites/default/files/ministerio-seguridad-argentina-informe-gestion-sifebu-2024.pdf
 
 ### Brazil
-- **Missing Persons & Forced Disappearances (Academic Article)**  
+
+- **Missing Persons & Forced Disappearances (Academic Article)**
   https://www.sciencedirect.com/science/article/pii/S2665910722000330
 
 ---
 
 ## Anecdotal / Qualitative Data & Additional Resources
 
-- **The Charley Project – Geographic Case Search (Mexico)**  
-  https://charleyproject.org/case-searches/geographical-cases?region=Mexico
-
-- **The Doe Network**  
-  https://www.doenetwork.org/
-
-- **The Lost People – NamUS Choropleth Mapping**  
-  https://jseibel55.github.io/The-Lost-People/#collapseThree
-
-- **A Consistent County-Level Spatial Crosswalk Since 1790**  
+- **The Charley Project – Geographic Case Search (Mexico)** https://charleyproject.org/case-searches/geographical-cases?region=Mexico
+- **The Doe Network** https://www.doenetwork.org/
+- **The Lost People – NamUS Choropleth Mapping** https://jseibel55.github.io/The-Lost-People/#collapseThree
+- **A Consistent County-Level Spatial Crosswalk Since 1790**
   https://fpeckert.me/papers/egp-spatialcrosswalk.pdf

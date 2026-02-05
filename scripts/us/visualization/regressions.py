@@ -32,7 +32,21 @@ df_csa = df_primary.groupby('CSA Code').agg(
     CSA_pop=('CSA_pop','last')
 ).reset_index().copy()
 
+df_state = df_primary.groupby('State').agg(
+    Case_Count=('CaseID', 'count'),
+    State_Title=('State','first'),
+    State_pop=('State_pop', 'last')
+)
+
 # --- Clean and prepare data
+df_state = df_state[(df_state['Case_Count'] > 0) & (df_state['State_pop'] > 0)].dropna()
+df_state['log_cases'] = np.log10(df_state['Case_Count'])
+df_state['log_pop'] = np.log10(df_state['State_pop'])
+
+df_counties = df_counties[(df_counties['Case_Count'] > 0) & (df_counties['County_pop'] > 0)].dropna()
+df_counties['log_cases'] = np.log10(df_counties['Case_Count'])
+df_counties['log_pop'] = np.log10(df_counties['County_pop'])
+
 df_counties = df_counties[(df_counties['Case_Count'] > 0) & (df_counties['County_pop'] > 0)].dropna()
 df_counties['log_cases'] = np.log10(df_counties['Case_Count'])
 df_counties['log_pop'] = np.log10(df_counties['County_pop'])
@@ -47,6 +61,7 @@ df_msa['log_pop'] = np.log10(df_msa['MSA_pop'])
 
 # Subsets
 datasets = {
+    'States': df_state,
     'Counties': df_counties,
     'CSAs': df_csa,
     'CBSAs': df_msa,
@@ -55,7 +70,8 @@ datasets = {
 }
 
 # --- Plot setup
-fig, axes = plt.subplots(1, 5, figsize=(24, 8), sharey=True)
+fig, axes = plt.subplots(2, 3, figsize=(24, 8), sharey=True)
+axes = axes.flatten()
 
 for ax, (title, df) in zip(axes, datasets.items()):
     # Fit log-log regression
@@ -102,19 +118,22 @@ for ax, (title, df) in zip(axes, datasets.items()):
 
     ax.set_title(title, fontsize=28)
     ax.tick_params(axis='both', labelsize=16)
-    ax.legend(fontsize=12, loc='upper left')
+    ax.legend(fontsize=10, loc='upper left')
     ax.grid(True)
-    ax.set_xlim(left=0)
+    ax.set_xlim(left=2)
     ax.set_ylim(bottom=0)
 
 axes[0].set_ylabel('log(NamUS Case Counts)\n[1969-2024]', fontsize=20)
-axes[0].set_xlabel('log(County Population)', fontsize=20)
-axes[1].set_xlabel('log(CSA Population)', fontsize=20)
-axes[2].set_xlabel('log(CBSA Population)', fontsize=20)
-axes[3].set_xlabel('log(MSA Population)', fontsize=20)
-axes[4].set_xlabel('log(MicroSA Population)', fontsize=20)
+axes[3].set_ylabel('log(NamUS Case Counts)\n[1969-2024]', fontsize=20)
+axes[0].set_xlabel('log(State Population)', fontsize=20)
+axes[1].set_xlabel('log(County Population)', fontsize=20)
+axes[2].set_xlabel('log(CSA Population)', fontsize=20)
+axes[3].set_xlabel('log(CBSA Population)', fontsize=20)
+axes[4].set_xlabel('log(MSA Population)', fontsize=20)
+axes[5].set_xlabel('log(MicroSA Population)', fontsize=20)
 
-fig.suptitle('Scaling Exponent (β) of NamUs Missing Persons Cases vs GEOID Population [1969–2024]', fontsize=28)
-plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+fig.suptitle('Scaling Exponent (β) of NamUs Missing Persons Cases vs GEOID Population [1969-2024]', fontsize=28)
+plt.tight_layout(rect=[0.025, 0, 1, 1], h_pad=0.01)
 plt.show()
+
 fig.savefig(r'plots/regressions/cumulative/[1969-2024]regressions.png', dpi=1500, bbox_inches='tight')
