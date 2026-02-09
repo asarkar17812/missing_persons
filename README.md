@@ -6,12 +6,9 @@
 
 ---
 
-The Missing Persons (MP) project is an attempt to understand the underlying similarities in the rate of missing persons versus population across different countries. This project was born out of the interest to understand the evolution of missing persons cases specifically in Mexico, both over time and cumulatively, as Mexico faces one of the biggest missing persons crises globally. While other counties, like India, also struggle with the number of missing persons cases, the available data for other countries, makes it difficult to accurately understand the scaling patterns. Furthermore, the amount of censorship makes it difficult to recover the data in a meaninful way, further disrupting any conclusions that we could potentially make. That being said, the estimates and figures presented in this repository are based on the United States's NamUs Missing Persons database and Mexican INEGI database; about 40% of the Mexican INEGI database entries have missing/censored "Date of Incidence" entries, which makes it difficult to attribute cases to any specific year, and so, that is why there is no time-series figures available for Mexican INEGI cases. Similarly, about 41% of Mexican INEGI cases are missing a "Municipality" entry, which means that we cannot correctly aggregate Municipal-level case sums. Regardless, 
+The Missing Persons (MP) project is an attempt to understand the underlying similarities in the rate of missing persons versus population across different countries. This project was born out of the interest to understand the evolution of missing persons cases specifically in Mexico, both over time and cumulatively, as Mexico faces one of the biggest missing persons crises globally. While other counties, like India, also struggle with the number of missing persons cases, the available data for other countries, makes it difficult to accurately understand the scaling patterns. Furthermore, the amount of censorship makes it difficult to recover the data in a meaninful way, further disrupting any conclusions that we could potentially make. That being said, the estimates and figures presented in this repository are based on the United States's NamUs Missing Persons database and Mexican INEGI database; about 40% of the Mexican INEGI database entries have missing/censored "Date of Incidence" entries, which makes it difficult to attribute cases to any specific year, and so, that is why there is no time-series figures available for Mexican INEGI cases. Similarly, about 41% of Mexican INEGI cases are missing a "Municipality" entry, which means that we cannot correctly aggregate Municipal-level case sums. Regardless, choropleth and regression plots for cumulative Mexican INEGI cases by State are made available, along with demographic plots. 
 
 To learn more about the methodology and to run the code, please open mp.ipynb
-
-
-
 
 ---
 
@@ -63,6 +60,7 @@ To learn more about the methodology and to run the code, please open mp.ipynb
 - **INEGI Missing & Unaccounted-for Persons Dataset** https://figshare.com/articles/dataset/Missing_and_Unaccounted-for_People_in_Mexico_1960s_2025_/28283000
 - **Governmental Crime & Missing Persons Report**
   https://www.gob.mx/sesnsp/acciones-y-programas/incidencia-delictiva-del-fuero-comun-nueva-metodologia
+- **OpenStreetMaps Mexican State Shape Files** https://github.com/jschleuss/mexican-states
 
 ### New Mexico
 

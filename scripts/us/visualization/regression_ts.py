@@ -8,8 +8,8 @@ df_primary = pd.read_csv(r'export/mp_term.csv')
 
 # --- Parse and clean the disappearance date
 df_primary['DisappearanceDate'] = pd.to_datetime(df_primary['DisappearanceDate'], errors='coerce')
-# df_primary = df_primary[df_primary['CBSA Type'] == 'MSA'] # ----> .groupby('MSA Code', 'MSA_pop')
-# df_primary = df_primary[df_primary['CBSA Type'] == 'MicroSA'] # ----> .groupby('MSA Code', 'MSA_pop')
+# df_primary = df_primary[df_primary['CBSA Type'] == 'MSA'] # ----> .groupby('MSA Code', 'State_pop')
+# df_primary = df_primary[df_primary['CBSA Type'] == 'MicroSA'] # ----> .groupby('MSA Code', 'State_pop')
 # df_primary = df_primary[df_primary['CSA Type'] == 'CSA'] # ----> .groupby('CSA Code', 'CSA_pop')
 
 # --- Set date index and sort
@@ -49,7 +49,7 @@ plt.yticks(y_ticks, fontsize=14)
 plt.ylim(y_ticks[0] + .5)
 plt.xlim(all_months[0], all_months[-1])
 plt.tight_layout()
-plt.savefig(r'plots/regressions/temporal/counties/[1969-2024]/[1969-2024]cumulative_cases.png', dpi=1200, bbox_inches='tight')
+plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]cumulative_cases.png', dpi=1200, bbox_inches='tight')
 plt.show()
 
 # --- Regression: annual new cases
@@ -69,7 +69,7 @@ for year in years:
     df_year = df[df['Year'] == year]
 
     grouped = (
-        df_year.groupby(['MSA Code', 'MSA_pop'])
+        df_year.groupby(['State', 'State_pop'])
         .agg(case_count=('CaseID', 'count'))
         .reset_index()
     )
@@ -80,7 +80,7 @@ for year in years:
     running_total_cases += yearly_case_sum
 
     if len(grouped) > 1:
-        X_log = np.log10(grouped['MSA_pop'].values)
+        X_log = np.log10(grouped['State_pop'].values)
         y_log = np.log10(grouped['case_count'].values)
         X_log_const = sm.add_constant(X_log)
         model = sm.OLS(y_log, X_log_const).fit()
@@ -92,7 +92,7 @@ for year in years:
         intercept_ci_lower, intercept_ci_upper = conf_int[0]
         beta_ci_lower, beta_ci_upper = conf_int[1]
 
-        total_pop = grouped['MSA_pop'].sum()
+        total_pop = grouped['State_pop'].sum()
 
         # Store results
         intercepts.append(intercept)
@@ -140,7 +140,7 @@ plt.errorbar(
     elinewidth=2,
     label=r'$\beta$ with 95% CI'
 )
-plt.title(r'Scaling Exponent ($\beta$) of Annual NamUS Missing Person Cases vs MicroSA Population (1969–2024)', fontsize=28)
+plt.title(r'Scaling Exponent ($\beta$) of Annual NamUS Missing Person Cases vs State Population (1969–2024)', fontsize=28)
 plt.xlabel('Year', fontsize=24)
 plt.ylabel(r'Estimated Scaling Exponent Value ($\beta$)', fontsize=24)
 plt.xticks(years_to_plot, rotation=65, fontsize=14)
@@ -148,10 +148,10 @@ plt.yticks(fontsize=14)
 plt.legend()
 max_beta = np.nanmax(betas)
 min_beta = np.nanmin(betas)
-plt.ylim(min_beta - .65, max_beta + 0.35)
+plt.ylim(min_beta - .45, max_beta + .35)
 plt.figtext(0.975, 0.105, f"\n\nBaseline cases prior to 1969: {baseline_cases}", ha="right", fontsize=14)
 plt.tight_layout()
-plt.savefig(r'plots/regressions/temporal/MicroSAs/[1969-2024]/[1969-2024]_regression_ts_musas_annual.png', dpi=1200, bbox_inches='tight')
+plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]_regression_ts_states_annual.png', dpi=1200, bbox_inches='tight')
 plt.show()
 
 # --- Identify best/worst R²
@@ -166,12 +166,12 @@ worst_year = years_to_plot[worst_year_idx]
 def plot_regression_scatter(ax, year, df, title_prefix=''):
     df_year = df[df['Year'] == year]
     grouped = (
-        df_year.groupby(['MSA Code', 'MSA_pop'])
+        df_year.groupby(['State', 'State_pop'])
         .agg(case_count=('CaseID', 'count'))
         .reset_index()
     )
-    grouped = grouped[(grouped['MSA_pop'] > 0) & (grouped['case_count'] > 0)]
-    grouped['log_pop'] = np.log10(grouped['MSA_pop'])
+    grouped = grouped[(grouped['State_pop'] > 0) & (grouped['case_count'] > 0)]
+    grouped['log_pop'] = np.log10(grouped['State_pop'])
     grouped['log_cases'] = np.log10(grouped['case_count'])
     grouped = grouped[np.isfinite(grouped['log_pop']) & np.isfinite(grouped['log_cases'])]
     X = grouped['log_pop'].values
@@ -208,7 +208,7 @@ fig, axes = plt.subplots(1, 2, figsize=(18, 8))
 plot_regression_scatter(axes[0], worst_year, df, title_prefix='Worst Year (Annual): ')
 plot_regression_scatter(axes[1], best_year, df, title_prefix='Best Year (Annual): ')
 plt.tight_layout()
-plt.savefig(r'plots/regressions/temporal/MicroSAs/[1969-2024]/[1969-2024]_regression_comparison_ts_musas_annual.png', dpi=1200, bbox_inches='tight')
+plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]_regression_comparison_ts_states_annual.png', dpi=1200, bbox_inches='tight')
 plt.show()
 
 # --- R² time series
@@ -230,7 +230,7 @@ def plot_r2_timeseries(years, r2_values):
     plt.grid(True, alpha=0.6)
     plt.legend(fontsize=18)
     plt.tight_layout()
-    plt.savefig(r'plots/regressions/temporal/MicroSAs/[1969-2024]/[1969-2024]_r2_ts_musas_annual.png', dpi=1200, bbox_inches='tight')
+    plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]_r2_ts_states_annual.png', dpi=1200, bbox_inches='tight')
     plt.show()
 
 plot_r2_timeseries(years, r2_array)

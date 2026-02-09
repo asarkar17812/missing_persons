@@ -40,14 +40,24 @@ def normalize_state_name(s):
 df_inegi = pd.read_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/source/mexico_missing_persons/data.csv', dtype=str)
 df_poblacion = pd.read_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/export/poblacion.csv', dtype=str)
 
-# def print_unknown_confidential_counts(df):
-#     for col in df.columns:
-#         count = df[col].isin(['UNKNOWN', 'CONFIDENTIAL', 'MISSING']).sum()
-#         total = df[col].size
-#         percent = (count / total) * 100 if total > 0 else 0
-#         print(f"{col}: (Count: {count}, Total: {total}); {percent:.2f}%")
+def print_unknown_confidential_counts(df):
+    for col in df.columns:
+        count = df[col].isin(['CENSORED']).sum()
+        total = df[col].size
+        percent = (count / total) * 100 if total > 0 else 0
+        print(f"{col}: (Count: {count}, Total: {total}); {percent:.2f}%")
 
 # print_unknown_confidential_counts(df_inegi)
+df_filtered = df_inegi[
+    (df_inegi['ORIGIN_AGENCY'].map(df_inegi['ORIGIN_AGENCY'].value_counts()) == 1) &
+    (df_inegi['MUNICIPALITY'] == "UNKNOWN")
+]
+
+print(df_inegi['ORIGIN_AGENCY'])
+
+
+#Confidential + Unknown 
+#-----------------------------------------------
 # VICTIM_ID: (Count: 0, Total: 129830); 0.00%
 # ORIGIN_AGENCY: (Count: 0, Total: 129830); 0.00%
 # DATE_OF_BIRTH: (Count: 76997, Total: 129830); 59.31%
@@ -59,6 +69,36 @@ df_poblacion = pd.read_csv(r'/Users/ayushsarkar/missing_persons/missing_persons/
 # STATE: (Count: 2936, Total: 129830); 2.26%
 # MUNICIPALITY_ID: (Count: 0, Total: 129830); 0.00%
 # MUNICIPALITY: (Count: 53132, Total: 129830); 40.92%
+
+
+# Unknown Only
+#---------------------------------------------
+# VICTIM_ID: (Count: 0, Total: 129830); 0.00%
+# ORIGIN_AGENCY: (Count: 0, Total: 129830); 0.00%
+# DATE_OF_BIRTH: (Count: 29252, Total: 129830); 22.53%
+# SEX: (Count: 360, Total: 129830); 0.28%
+# DATE_OF_INCIDENCE: (Count: 8246, Total: 129830); 6.35%
+# DATE_OF_REPORT: (Count: 6159, Total: 129830); 4.74%
+# VICTIM_STATUS: (Count: 0, Total: 129830); 0.00%
+# STATE_ID: (Count: 0, Total: 129830); 0.00%
+# STATE: (Count: 2936, Total: 129830); 2.26%
+# MUNICIPALITY_ID: (Count: 0, Total: 129830); 0.00%
+# MUNICIPALITY: (Count: 5387, Total: 129830); 4.15%
+
+
+# Confidential Only
+#---------------------------------------------
+# VICTIM_ID: (Count: 0, Total: 129830); 0.00%
+# ORIGIN_AGENCY: (Count: 0, Total: 129830); 0.00%
+# DATE_OF_BIRTH: (Count: 47745, Total: 129830); 36.78%
+# SEX: (Count: 47745, Total: 129830); 36.78%
+# DATE_OF_INCIDENCE: (Count: 47745, Total: 129830); 36.78%
+# DATE_OF_REPORT: (Count: 47745, Total: 129830); 36.78%
+# VICTIM_STATUS: (Count: 47745, Total: 129830); 36.78%
+# STATE_ID: (Count: 0, Total: 129830); 0.00%
+# STATE: (Count: 0, Total: 129830); 0.00%
+# MUNICIPALITY_ID: (Count: 0, Total: 129830); 0.00%
+# MUNICIPALITY: (Count: 47745, Total: 129830); 36.78%
 
 # def plot_missing_value_correlation(df, replace_special=True, special_values=None):
 
@@ -162,20 +202,20 @@ def plot_valid_entries_choropleth_shp(
     plt.show()
 
 
-plot_valid_entries_choropleth_shp(
-    df=df_inegi,
-    state_col='STATE',
-    columns_to_check=[
-        'DATE_OF_BIRTH',
-        'SEX',
-        'DATE_OF_INCIDENCE',
-        'DATE_OF_REPORT',
-        'VICTIM_STATUS'
-    ],
-    special_values=['UNKNOWN'],
-    shapefile_path=r'source/shape files/mexico/mexican-states.shp',
-    shapefile_state_col='name'
-)
+# plot_valid_entries_choropleth_shp(
+#     df=df_inegi,
+#     state_col='STATE',
+#     columns_to_check=[
+#         'DATE_OF_BIRTH',
+#         'SEX',
+#         'DATE_OF_INCIDENCE',
+#         'DATE_OF_REPORT',
+#         'VICTIM_STATUS'
+#     ],
+#     special_values=['UNKNOWN'],
+#     shapefile_path=r'source/shape files/mexico/mexican-states.shp',
+#     shapefile_state_col='name'
+# )
 
 def plot_population_choropleth_shp(
     df,
@@ -270,10 +310,10 @@ def plot_population_choropleth_shp(
     )
     plt.show()
 
-plot_population_choropleth_shp(
-    df=df_poblacion,
-    state_col='entidad',
-    pop_col='Total',
-    shapefile_path=r'/Users/ayushsarkar/missing_persons/missing_persons/source/shape files/mexico/mexican-states.shp',
-    shapefile_state_col='name'
-)
+# plot_population_choropleth_shp(
+#     df=df_poblacion,
+#     state_col='entidad',
+#     pop_col='Total',
+#     shapefile_path=r'/Users/ayushsarkar/missing_persons/missing_persons/source/shape files/mexico/mexican-states.shp',
+#     shapefile_state_col='name'
+# )
