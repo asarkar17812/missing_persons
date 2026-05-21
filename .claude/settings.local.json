@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import json; nb = json.load\\(open\\('mp.ipynb','r',encoding='utf-8'\\)\\); print\\('Total cells:', len\\(nb['cells']\\)\\); print\\('Cell types:', [c['cell_type'] for c in nb['cells']]\\); print\\('First few cell ids:', [c.get\\('id','no-id'\\) for c in nb['cells'][:5]]\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('mp.ipynb',encoding='utf-8'\\)\\); print\\('Cells:', len\\(nb['cells']\\)\\); print\\('Valid:', all\\('cell_type' in c for c in nb['cells']\\)\\)\")",
+      "Bash(python -c \"import json; nb=json.load\\(open\\('mp.ipynb',encoding='utf-8'\\)\\); md=sum\\(len\\(''.join\\(c['source']\\) if isinstance\\(c['source'],list\\) else c['source']\\) for c in nb['cells'] if c['cell_type']=='markdown'\\); print\\(f'Notebook markdown chars: {md}'\\)\")",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}
