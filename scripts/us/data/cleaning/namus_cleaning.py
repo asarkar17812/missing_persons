@@ -1,13 +1,48 @@
+"""
+NamUs cleaning pipeline.
+
+Reads the raw NamUs JSON dump (from scripts/us/data/scraper/namus.py) and
+produces two CSVs:
+
+    export/cleaned_missing_persons.csv
+        One row per case, with the eight columns we actually use downstream.
+        Missing / empty / unknown fields are tokenized as MISSING / CENSORED
+        / UNKNOWN so that downstream code can tell them apart.
+
+    export/namus_cases.csv
+        The above, post-filtering: years clamped to [1969, 2024], territories
+        (PR, VI, GU, MP) dropped, Connecticut post-2022 city -> planning-region
+        remap applied, and rows whose County field can't be resolved dropped.
+        Final row count: 25,532 (as of the 07/17/2025 snapshot).
+
+The two CSVs exist as separate artifacts because some downstream demographic
+analyses want the un-filtered version (so they can count CENSORED records
+honestly), while the scaling regression wants only rows with a usable County.
+
+Run as:
+    python scripts/us/data/cleaning/namus_cleaning.py
+"""
+
 import pandas as pd
 import numpy as np
 import csv
 import json
 
-# ===============================
-# Helper: tokenize missing values
-# ===============================
+
 def tokenize(value):
-    """Convert empty/missing/unknown/redacted values into consistent tokens."""
+    """Normalize a field to one of three explicit tokens or return as-is.
+
+    NamUs fields come in three "bad" flavors that we want to distinguish:
+      - `None` from the JSON  -> "MISSING"   (the field was never populated)
+      - Empty / "N/A"-like     -> "CENSORED" (the field was explicitly blanked)
+      - "Unknown" / "Unk"      -> "UNKNOWN"  (the source labeled it unknown)
+    Anything else (including normal strings, numbers, etc.) passes through
+    unchanged.
+
+    Keeping these distinct lets us reason later about *why* a column is
+    sparse — random data loss vs. deliberate redaction vs. agency-reported
+    uncertainty are three different problems.
+    """
     if value is None:
         return "MISSING"
     if isinstance(value, str):
@@ -19,9 +54,10 @@ def tokenize(value):
     return value
 
 
-# ===============================
-# Load raw NamUs JSON
-# ===============================
+# ---------------------------------------------------------------------------
+# Step 1: load the raw NamUs JSON and flatten the nested case structure.
+# ---------------------------------------------------------------------------
+
 with open(
     r'F:\dsl_CLIMA\projects\Missing Persons Project\output\namus-20250717.json',
     'r',
@@ -31,6 +67,7 @@ with open(
 
 main_data = []
 
+# Each NamUs case is a deeply-nested object; pull out only the fields we use.
 for entry in data:
     subject = entry.get("subjectIdentification", {})
     desc = entry.get("subjectDescription", {})
@@ -62,9 +99,10 @@ for entry in data:
     main_data.append(row)
 
 
-# ===============================
-# Write intermediate CSV
-# ===============================
+# ---------------------------------------------------------------------------
+# Step 2: write the intermediate, un-filtered CSV.
+# ---------------------------------------------------------------------------
+
 output_csv = r'F:\dsl_CLIMA\projects\submittable\missing persons\export\cleaned_missing_persons.csv'
 
 with open(output_csv, 'w', newline='', encoding='utf-8') as f:
@@ -73,9 +111,12 @@ with open(output_csv, 'w', newline='', encoding='utf-8') as f:
     writer.writerows(main_data)
 
 
-# ===============================
-# Reload as DataFrame
-# ===============================
+# ---------------------------------------------------------------------------
+# Step 3: reload as a DataFrame for the filtering / normalization steps.
+# We parse DisappearanceDate as a datetime up front because we need to clamp
+# the year next.
+# ---------------------------------------------------------------------------
+
 df_namus = pd.read_csv(
     output_csv,
     parse_dates=['DisappearanceDate'],
@@ -88,18 +129,30 @@ df_namus = df_namus[
 ].copy()
 
 
-# ===============================
-# Year handling (cap pre-1969)
-# ===============================
+# ---------------------------------------------------------------------------
+# Step 4: clamp the year to [1969, 2024].
+#   - Our SEER population panel only starts in 1969, so anything earlier
+#     gets clipped to 1969 (rather than dropped).
+#   - 2025 entries are in-progress and get clipped to 2024.
+# ---------------------------------------------------------------------------
+
 df_namus['Year'] = df_namus['DisappearanceDate'].dt.year
 df_namus.loc[df_namus['Year'] < 1969, 'Year'] = 1969
 df_namus.loc[df_namus['Year'] > 2024, 'Year'] = 2024
 df_namus['Year'] = df_namus['Year'].astype(int)
 
 
-# ===============================
-# Connecticut post-2022 handling
-# ===============================
+# ---------------------------------------------------------------------------
+# Step 5: Connecticut post-2022 handling.
+#
+# In 2022 Connecticut replaced its eight historical counties with nine
+# "Planning Regions" for federal reporting. NamUs records from 2023 onward
+# still write the city, but the county field is often blank or stale. We
+# manually map the affected post-2022 CT rows from city -> planning-region
+# so they merge cleanly against the 2023 crosswalk in the next pipeline
+# stage (crosswalk_cleaning.py).
+# ---------------------------------------------------------------------------
+
 connecticut_cities_to_county = {
     'EAST HARTFORD': 'CAPITOL PLANNING REGION',
     'MERIDEN': 'SOUTH CENTRAL CONNECTICUT PLANNING REGION',
@@ -120,20 +173,24 @@ connecticut_cities_to_county = {
     'DANBURY': 'SOUTHEASTERN CONNECTICUT PLANNING REGION'
 }
 
-# Normalize early
+# Normalize string columns to upper-case stripped form before the merge.
 df_namus['State'] = df_namus['State'].astype(str).str.strip().str.upper()
 df_namus['County'] = df_namus['County'].astype(str).str.strip().str.upper()
 df_namus['City'] = df_namus['City'].astype(str).str.strip().str.upper()
 
 ct_mask = (df_namus['State'] == 'CONNECTICUT') & (df_namus['Year'] > 2022)
 mapped_ct = df_namus.loc[ct_mask, 'City'].map(connecticut_cities_to_county)
+# `combine_first` preserves the existing County value if the city isn't in
+# our manual map — we only overwrite when we have a known mapping.
 df_namus.loc[ct_mask, 'County'] = mapped_ct.combine_first(df_namus.loc[ct_mask, 'County'])
 
 
-# ===============================
-# Drop territories
-# 
-# ===============================
+# ---------------------------------------------------------------------------
+# Step 6: drop U.S. territories.
+# SEER doesn't cover PR/VI/GU/MP, so cases from those territories can't
+# be joined to a population panel and have to be dropped.
+# ---------------------------------------------------------------------------
+
 dropped_states = {
     'PUERTO RICO',
     'VIRGIN ISLANDS',
@@ -142,9 +199,14 @@ dropped_states = {
 }
 df_namus = df_namus[~df_namus['State'].isin(dropped_states)]
 
-# ===============================
-# Bad county flag
-# ===============================
+
+# ---------------------------------------------------------------------------
+# Step 7: drop rows whose County field can't be resolved.
+# Anything tokenized as MISSING/UNKNOWN/CENSORED can't be merged to a FIPS
+# code in the crosswalk step, so we drop it. We also coerce a literal
+# "NAN" string (which pandas sometimes leaves around) back to actual NaN.
+# ---------------------------------------------------------------------------
+
 bad_values = {'MISSING', 'UNKNOWN', 'CENSORED'}
 
 df_namus['County'] = (
@@ -160,11 +222,12 @@ df_namus = df_namus[
 ].copy()
 
 
-# ===============================
-# Export final NamUs cases
-# Total Cases: 25532
-# ===============================
-df_namus.to_csv( r'F:\dsl_CLIMA\projects\submittable\missing persons\export\namus_cases.csv', index=False)
+# ---------------------------------------------------------------------------
+# Step 8: write the filtered CSV.
+# Expected row count: 25,532 (07/17/2025 snapshot).
+# ---------------------------------------------------------------------------
+
+df_namus.to_csv(r'F:\dsl_CLIMA\projects\submittable\missing persons\export\namus_cases.csv', index=False)
 
 print("Final row count:", len(df_namus))
 print(df_namus)
