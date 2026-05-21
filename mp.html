@@ -7815,46 +7815,55 @@ a.anchor-link {
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h1 id="Introduction:">Introduction:<a class="anchor-link" href="#Introduction:">¶</a></h1><ul>
-<li>To better understand the parallels in the number of missing persons cases in urban areas internationally, this notebook investigates the scaling rates of aggregate missing persons cases against GEOID-level populations.</li>
-<li>We considered many different South American countries, including Mexico, Columbia, Brazil, and Argentina. Despite considering so many other countries, Mexico had the most complete and similar administrative division structure to the United States, although Colombia did seem promising.</li>
+<li>This notebook investigates the <strong>scaling</strong> of missing persons cases against population at varying geographic levels, both within and across countries. The underlying question is whether the number of cases in a place grows in some predictable way with the size of that place — the way many other socio-economic quantities (crime, patents, GDP) have been shown to scale with city population in the urban scaling literature (Bettencourt et al., 2007).</li>
+<li>Concretely, for each geographic unit (county, MSA, CSA, state) we fit a log–log regression: $\log_{10}(\text{cases}) = \gamma + \beta \cdot \log_{10}(\text{population})$. The exponent $\beta$ tells us how the case count grows with population:<ul>
+<li>$\beta &lt; 1$ : <strong>sublinear</strong> — bigger places have proportionally <em>fewer</em> missing persons cases per capita.</li>
+<li>$\beta \approx 1$ : <strong>linear</strong> — cases scale roughly per-capita; the rate is approximately constant across place sizes.</li>
+<li>$\beta &gt; 1$ : <strong>superlinear</strong> — bigger places have proportionally <em>more</em> cases per capita.</li>
+</ul>
+</li>
+<li>This project originally grew out of an interest in Mexico, which is in the middle of one of the world's largest missing persons crises. We initially considered comparing across several Latin American countries — Mexico, Colombia, Brazil, and Argentina — but Mexico ended up being the only country whose administrative structure and case-level data were complete enough to plug into the same scaling framework as the U.S. (Colombia looked promising on paper but the SIEDCO releases aren't granular enough to aggregate the way NamUs entries can be.)</li>
 </ul>
 <h1 id="Methodology:">Methodology:<a class="anchor-link" href="#Methodology:">¶</a></h1><ul>
-<li><p>We consider three main datasets in regards to developing the United States GEOID case sums and population estimates for scaling:</p>
+<li><p>For the <strong>United States</strong> we combine three datasets to build a (case, population) pair for each GEOID and year:</p>
 <ol>
-<li>NamUs Missing Persons Dataset (scraped as of 07/17/2025)</li>
-<li>SEER Age-adjusted Population Estimates 1969-2022 + 2024 US County-level Census</li>
-<li>QCEW-County-MSA-CSA Crosswalk (Contains historical crosswalks from 1990 - Dec. 2003, Dec. 2003 - Feb. 2013, Feb. 2013 - July 2023, July 2023 - Present)</li>
+<li><strong>NamUs Missing Persons Dataset</strong> (National Missing and Unidentified Persons System), scraped as of 07/17/2025</li>
+<li><strong>SEER Age-Adjusted County Population Estimates</strong> (1969–2022) supplemented with the Census Bureau's 2024 county-level estimates for 2023–2024</li>
+<li><strong>QCEW County–MSA–CSA Crosswalk</strong> from BLS, which contains four vintages (pre-Dec. 2003, Dec. 2003 – Feb. 2013, Feb. 2013 – Jul. 2023, Jul. 2023 – Present); we apply the crosswalk vintage appropriate to each year so that historical CBSA/CSA boundaries are respected.</li>
 </ol>
 </li>
-<li><p>We consider two main datasets in regards to developing the Mexican STATE case sums and population estimates for scaling:</p>
+<li><p>For <strong>Mexico</strong> we combine:</p>
 <ol>
-<li>figshare: Scraped INEGI Database (Version 4; 07-02-2025)</li>
-<li>INEGI Poblacion Public Download</li>
-<li>OpenStreetMap Mexican States Shape File</li>
+<li><strong>Scraped INEGI Database</strong> (figshare; Version 4, 07-02-2025) — case-level, with state and (when available) municipality</li>
+<li><strong>INEGI Población</strong> public download — state-level population projections for 2020–2070</li>
+<li><strong>OpenStreetMap Mexican States Shapefile</strong> — used as the spatial layer for choropleths and state-name normalization.</li>
 </ol>
 </li>
-<li><p>From investigation, it seems as if there are few public missing persons databases available due to the sensitive nature of these cases and the family members involved. There is seemingly a federal-level database, although it is not accessible to public under normal circumstances. Thus, we consider the National Missing and Unidentified Persons System, or NamUs for short, as which was scraped as of 07/17/2025 to generate the supplemental .json file included.</p>
+<li><p>On data availability: there is no consolidated international missing persons registry, and the sensitive nature of the data means most national datasets are either inaccessible or fragmentary. The U.S. <em>does</em> have a federal database (NCIC), but it's not open to the public. <strong>NamUs</strong> is the closest publicly-queryable substitute — it's voluntary, so it underrepresents cases, but the records it does carry are case-by-case rather than pre-aggregated.</p>
 <ul>
-<li>The NamUs database contained about 25,630 entries as of 07/17/2025.</li>
-<li>This cases include entries from 1902-2025</li>
+<li>The NamUs database contained about 25,630 entries as of 07/17/2025, with disappearance dates spanning 1902–2025.</li>
+<li>After dropping U.S. territories (PR, VI, GU, MP) and rows with unresolvable counties, we retained <strong>25,532 cases</strong> for analysis.</li>
 </ul>
 </li>
-<li><p>Mexico's INEGI database suffers from both censorship and missingness, a problem that affects each column to a different proportion. We can recognize the percent of "MISSING", "UNKNOWN", and "CENSORED", in each column such that:</p>
+<li><p>Mexico's INEGI database is much larger (129,830 entries) but suffers from both <strong>censorship</strong> (records redacted by the government, typically tagged as "CONFIDENTIAL") and ordinary <strong>missingness</strong> ("UNKNOWN"). The combined rates per column are:</p>
 <ul>
-<li>VICTIM_ID: (Count: 0, Total: 129830); 0.00%</li>
-<li>ORIGIN_AGENCY: (Count: 0, Total: 129830); 0.00%</li>
-<li>DATE_OF_BIRTH: (Count: 76997, Total: 129830); 59.31%</li>
-<li>SEX: (Count: 48105, Total: 129830); 37.05%</li>
-<li>DATE_OF_INCIDENCE: (Count: 55991, Total: 129830); 43.13%</li>
-<li>DATE_OF_REPORT: (Count: 53904, Total: 129830); 41.52%</li>
-<li>VICTIM_STATUS: (Count: 124808, Total: 129830); 96.13%</li>
-<li>STATE_ID: (Count: 0, Total: 129830); 0.00%</li>
-<li>STATE: (Count: 2936, Total: 129830); 2.26%</li>
-<li>MUNICIPALITY_ID: (Count: 0, Total: 129830); 0.00%</li>
-<li>MUNICIPALITY: (Count: 53132, Total: 129830); 40.92%</li>
-<li>As we can clearly see, the number of incomplete row entries heavily affects the columns: "MUNICIPALITY", "DATE_OF_INCIDENCE" and "DATE_OF_REPORT", which then makes it difficult to attribute cases to their correct municipality and year. In fact, when we try to do demographic analyses, we</li>
+<li>VICTIM_ID: 0.00%</li>
+<li>ORIGIN_AGENCY: 0.00%</li>
+<li>DATE_OF_BIRTH: <strong>59.31%</strong> missing/censored</li>
+<li>SEX: <strong>37.05%</strong></li>
+<li>DATE_OF_INCIDENCE: <strong>43.13%</strong></li>
+<li>DATE_OF_REPORT: <strong>41.52%</strong></li>
+<li>VICTIM_STATUS: <strong>96.13%</strong> (essentially unusable)</li>
+<li>STATE_ID: 0.00%</li>
+<li>STATE: 2.26%</li>
+<li>MUNICIPALITY_ID: 0.00%</li>
+<li>MUNICIPALITY: <strong>40.92%</strong></li>
+<li>The two columns that hurt us the most are <code>DATE_OF_INCIDENCE</code> and <code>MUNICIPALITY</code> — losing ~43% of the dates makes a year-resolved time series unreliable, and losing ~41% of the municipalities means we can't safely aggregate below the state level. That's why for Mexico we restrict ourselves to <strong>cumulative state-level</strong> scaling rather than yearly municipal-level scaling. The state and STATE_ID columns are essentially complete, so the cumulative state-population regression is still defensible.</li>
 </ul>
 </li>
+</ul>
+<h1 id="A-note-on-tokenization:">A note on tokenization:<a class="anchor-link" href="#A-note-on-tokenization:">¶</a></h1><ul>
+<li>Throughout the cleaning pipeline we replace blank/empty/censored fields with three explicit tokens — <code>MISSING</code> (the field was <code>None</code>), <code>CENSORED</code> (the field was empty / <code>N/A</code>-like / deliberately blanked out), and <code>UNKNOWN</code> (the source explicitly labeled the field as unknown). Keeping these distinct lets us tell apart "this record never had the field" from "this record's field was deliberately redacted," which matters when reasoning about <em>why</em> a column is sparse.</li>
 </ul>
 </div>
 </div>
@@ -7866,7 +7875,45 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Code:">Code:<a class="anchor-link" href="#Code:">¶</a></h1>
+<h1 id="Code:">Code:<a class="anchor-link" href="#Code:">¶</a></h1><p>The notebook is split into two phases: <strong>Data Cleaning</strong> (build the cleaned case/population frames the visualizations consume) and <strong>Data Visualization</strong> (regressions, choropleths, demographics).</p>
+<p>The cleaning phase produces five canonical CSVs that everything downstream reads from:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it holds</th>
+<th>Built by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cleaned_missing_persons.csv</code></td>
+<td>Raw NamUs cases reduced to the columns we care about, with consistent missingness tokens</td>
+<td><code>scripts/us/data/cleaning/namus_cleaning.py</code></td>
+</tr>
+<tr>
+<td><code>namus_cases.csv</code></td>
+<td>The post-cleaning NamUs frame after dropping territories and unresolvable counties (N = 25,532)</td>
+<td>same file</td>
+</tr>
+<tr>
+<td><code>population.csv</code></td>
+<td>County-year population panel built from SEER (1969–2022) + Census 2024 vintage + shapefile fallbacks for retired FIPS</td>
+<td><code>scripts/us/data/cleaning/population_cleaning.py</code></td>
+</tr>
+<tr>
+<td><code>mp_term.csv</code></td>
+<td>The merged NamUs + population + crosswalk frame — one row per case, joined to its County / MSA / CSA / State population for that year</td>
+<td><code>scripts/us/data/cleaning/crosswalk_cleaning.py</code></td>
+</tr>
+<tr>
+<td><code>pop_term.csv</code></td>
+<td>The matching population panel with MSA / CSA / State aggregates attached</td>
+<td>same file</td>
+</tr>
+</tbody>
+</table>
+<p>Run the cells in order the first time through; once <code>mp_term.csv</code> and <code>pop_term.csv</code> exist, the visualization cells can be re-run independently.</p>
 </div>
 </div>
 </div>
@@ -7877,7 +7924,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Data-Cleaning:">Data Cleaning:<a class="anchor-link" href="#Data-Cleaning:">¶</a></h2>
+<h2 id="Data-Cleaning:">Data Cleaning:<a class="anchor-link" href="#Data-Cleaning:">¶</a></h2><p>We clean two case-level sources (NamUs for the U.S., INEGI for Mexico) and two population panels (SEER + Census for U.S. counties, INEGI's <em>Población</em> projections for Mexican states), then merge each country's case frame to its population frame at every geographic level we want to regress on. The U.S. side also needs a <em>crosswalk</em> step because counties aggregate into CBSAs (Core-Based Statistical Areas) and CSAs (Combined Statistical Areas), and those boundaries have been redrawn three times since 2003 — we apply the crosswalk vintage appropriate to each year's row so we don't anachronistically file, say, a 2001 case into a 2023 MSA definition.</p>
 </div>
 </div>
 </div>
@@ -7888,7 +7935,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="United-States-NamUs-Cases:">United States NamUs Cases:<a class="anchor-link" href="#United-States-NamUs-Cases:">¶</a></h3>
+<h3 id="United-States-NamUs-Cases:">United States NamUs Cases:<a class="anchor-link" href="#United-States-NamUs-Cases:">¶</a></h3><p>We need (case, population) pairs at the county level <em>for the right year</em>, which means the cleaning has to do three things at once: build a consistent county-year population panel, clean and de-territorialize the NamUs JSON, and stitch the two together through the right historical crosswalk. The three subsections below do exactly this — first the population side (SEER + 2024 Census), then NamUs, then the crosswalk merge.</p>
 </div>
 </div>
 </div>
@@ -7899,7 +7946,14 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="SEER-Population-Estimate-Cleaning:">SEER Population Estimate Cleaning:<a class="anchor-link" href="#SEER-Population-Estimate-Cleaning:">¶</a></h4>
+<h4 id="SEER-Population-Estimate-Cleaning:">SEER Population Estimate Cleaning:<a class="anchor-link" href="#SEER-Population-Estimate-Cleaning:">¶</a></h4><p>The SEER population file is a fixed-width text dump indexed by year and FIPS code — that's what STEP 0 below parses out into a tidy <code>(Year, FIPS, Population)</code> table. We use SEER rather than the raw Census because SEER provides a <em>consistent</em> county-year panel from 1969 onward; the Census Bureau releases annual estimates but with shifting schemas, FIPS reassignments, and the occasional county split/merge.</p>
+<p>A few details worth flagging:</p>
+<ul>
+<li><strong>Why we filter <code>^\d{2}9\d{2}$</code></strong> — those are SEER's state-pooled "registry" pseudo-FIPS (e.g. 06900 = California aggregate), not real counties. They duplicate population if left in.</li>
+<li><strong>Why we apply the Miami-Dade correction in <code>df_cencount</code> only</strong> — SEER uses FIPS <code>12025</code> (the pre-1997 code for what's now Miami-Dade, <code>12086</code>). The NBER <code>cencounts</code> file uses the new code. We re-map <code>cencounts</code> instead of SEER so the population panel keeps its historical FIPS continuity, and the name lookup still resolves correctly.</li>
+<li><strong>Shapefile fallback</strong> — some FIPS in SEER are legacy codes that no longer appear in the modern Census table (<code>cencounts</code>). For those we walk backward through NHGIS historical county shapefiles (2024 → 1900) and grab the county name from whichever vintage first matches. That way an unresolved FIPS gets the <em>historically correct</em> name rather than being dropped.</li>
+<li>The final manual corrections at the bottom (Miami-Dade, Lasalle, De Baca, St. John the Baptist, Doña Ana) reconcile name-spelling differences between the SEER vintage and the BLS crosswalk so the join in the next step doesn't drop those counties.</li>
+</ul>
 </div>
 </div>
 </div>
@@ -8165,7 +8219,15 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="NamUs-Scraping-and-Cleaning:">NamUs Scraping and Cleaning:<a class="anchor-link" href="#NamUs-Scraping-and-Cleaning:">¶</a></h4>
+<h4 id="NamUs-Scraping-and-Cleaning:">NamUs Scraping and Cleaning:<a class="anchor-link" href="#NamUs-Scraping-and-Cleaning:">¶</a></h4><p>The raw NamUs export is a JSON dump produced by the <strong>NightOwlRecon</strong> scraper (see <code>scripts/us/data/scraper/namus.py</code>) — it iterates the public NamUs API by state, paginates the case-search endpoint, then fetches each case's full record, with exponential backoff on failure. We freeze the 07/17/2025 pull as our snapshot.</p>
+<p>The cleaning step below does five things, each motivated by a downstream join:</p>
+<ol>
+<li><strong>Tokenize</strong> every field through the <code>tokenize</code> helper so blank/missing/redacted values all become explicit <code>MISSING</code> / <code>CENSORED</code> / <code>UNKNOWN</code> strings. This is what lets us reason later about <em>why</em> a column is sparse.</li>
+<li><strong>Flatten</strong> the nested JSON (subject / description / sighting / address / agency) into a tidy row per case with the eight columns we actually use.</li>
+<li><strong>Cap years at [1969, 2024]</strong> — there are NamUs entries from 1902 onward but our population panel only starts at 1969 (SEER's coverage), so we clip the pre-1969 entries to 1969 rather than drop them. They show up in the cumulative scaling but not in any year-resolved time series before 1969.</li>
+<li><strong>Handle Connecticut after 2022</strong> — in 2022 Connecticut replaced its eight historical counties with nine "Planning Regions" for federal reporting. NamUs records from 2023 onward still write the <em>city</em>, but the <em>county</em> field is often blank or stale. We map a manual city → planning-region lookup for the affected post-2022 CT rows so they merge cleanly against the 2023 crosswalk.</li>
+<li><strong>Drop territories and unresolvable counties</strong> — Puerto Rico, the USVI, Guam, and the Northern Marianas aren't in our SEER panel; rows whose <code>County</code> field tokenized to <code>MISSING</code> / <code>UNKNOWN</code> / <code>CENSORED</code> can't be joined to a FIPS, so we drop them. Final clean count: <strong>25,532</strong> cases.</li>
+</ol>
 </div>
 </div>
 </div>
@@ -8359,7 +8421,12 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="Crosswalk-Cleaning-and-Merge:">Crosswalk Cleaning and Merge:<a class="anchor-link" href="#Crosswalk-Cleaning-and-Merge:">¶</a></h4>
+<h4 id="Crosswalk-Cleaning-and-Merge:">Crosswalk Cleaning and Merge:<a class="anchor-link" href="#Crosswalk-Cleaning-and-Merge:">¶</a></h4><p>This is the step that actually joins NamUs cases to their counties' populations, <strong>and</strong> rolls those counties up into the higher-order CBSA / CSA aggregates that we regress on later. Two things to understand before reading the code:</p>
+<ul>
+<li><strong>CBSA vs MSA vs MicroSA vs CSA.</strong> A <em>CBSA</em> (Core-Based Statistical Area) is the BLS umbrella for any urban core + commuter shed. An <em>MSA</em> (Metropolitan Statistical Area) is a CBSA with a core ≥ 50,000 people; a <em>MicroSA</em> (Micropolitan) is a CBSA whose core is 10,000–49,999. A <em>CSA</em> (Combined Statistical Area) is a tighter chain of two or more adjacent CBSAs with substantial commuting between them. Most U.S. counties belong to either no CBSA, exactly one CBSA, and at most one CSA.</li>
+<li><strong>Why three crosswalks.</strong> BLS issues a new County-MSA-CSA delineation every ~10 years; counties switch CBSAs, CBSAs merge, MicroSAs upgrade to MSAs. To keep the merge faithful to the year a case actually happened, we split the population panel into three slabs (≤ 2003, 2004–2012, 2013+) and merge each slab against the crosswalk vintage that was in force during that slab.</li>
+</ul>
+<p>The two merge helpers (<code>merge_pop_with_crosswalk</code>, <code>merge_cases_with_crosswalk</code>) handle the common case (good FIPS, direct join) plus a fallback path for cases whose <code>County</code> field is <code>MISSING</code>/<code>UNKNOWN</code>/<code>CENSORED</code> but whose <em>city</em> is present — for those, we try to recover an MSA from the city → MSA-title match, and if the recovered MSA contains exactly one county we backfill that county too. After the merge each NamUs row carries <code>County_pop</code>, <code>MSA_pop</code>, <code>CSA_pop</code>, and <code>State_pop</code> for the year of the disappearance, which is what every downstream regression scatter consumes.</p>
 </div>
 </div>
 </div>
@@ -8614,7 +8681,12 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Mexico-INEGI-Cases:">Mexico INEGI Cases:<a class="anchor-link" href="#Mexico-INEGI-Cases:">¶</a></h3>
+<h3 id="Mexico-INEGI-Cases:">Mexico INEGI Cases:<a class="anchor-link" href="#Mexico-INEGI-Cases:">¶</a></h3><p>The INEGI dump from figshare comes in roughly the schema NamUs does — one row per victim — but with much heavier missingness and a <em>separate</em> censorship overlay (rows the Mexican government has redacted on grounds of investigation sensitivity, all tagged as <code>CONFIDENTIAL</code>). The cell below prints the per-column missingness so we can see exactly which columns are usable and which are not, and then runs two diagnostic plots:</p>
+<ol>
+<li><strong>Missing-value correlation heatmap</strong> (via <code>missingno</code>) — this tells us whether missingness is column-independent (which would suggest random redaction) or correlated across columns (which would suggest <em>systematic</em> censorship, e.g. all five sensitive fields blanked together for a given record). The pattern here is closer to the latter: <code>DATE_OF_BIRTH</code>, <code>DATE_OF_INCIDENCE</code>, <code>DATE_OF_REPORT</code>, and <code>MUNICIPALITY</code> go missing together more often than chance would predict.</li>
+<li><strong>Choropleth of valid-entry counts by state</strong> — a sanity check that the missingness is roughly spatially uniform, and not concentrated in (say) a single border state. It is roughly uniform, with the heavy-population states (Estado de México, Jalisco, Veracruz) carrying proportionally more valid entries simply because they carry more entries overall.</li>
+</ol>
+<p>These diagnostics are why downstream we restrict the Mexico analyses to <strong>cumulative state-level</strong> scaling and demographics, rather than year-resolved or municipality-resolved analyses.</p>
 </div>
 </div>
 </div>
@@ -8762,7 +8834,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h1 id="Data-Visualization:">Data Visualization:<a class="anchor-link" href="#Data-Visualization:">¶</a></h1>
+<h1 id="Data-Visualization:">Data Visualization:<a class="anchor-link" href="#Data-Visualization:">¶</a></h1><p>With <code>mp_term.csv</code> and <code>pop_term.csv</code> built, everything from here on is <em>analysis</em> — regressions, choropleths, demographic breakdowns. The structure is symmetric between the two countries: for the U.S. (NamUs) we look at scaling, temporal evolution of the scaling exponent, choropleths, and demographic breakdowns; for Mexico (INEGI) we look at the same scaling regression at the state level plus per-100k yearly rates and demographic breakdowns. The Mexico side is necessarily thinner because of the missingness diagnosed above.</p>
 </div>
 </div>
 </div>
@@ -8784,7 +8856,11 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Scaling-Plots:">Scaling Plots:<a class="anchor-link" href="#Scaling-Plots:">¶</a></h3>
+<h3 id="Scaling-Plots:">Scaling Plots:<a class="anchor-link" href="#Scaling-Plots:">¶</a></h3><p>Two flavors of scaling regression live in this section:</p>
+<ul>
+<li><strong>Temporal scaling</strong> — for each year <em>t</em> in a chosen window we re-fit $\log(\text{cases}_t) = \gamma_t + \beta_t \log(\text{pop}_t)$ and watch $\beta_t$ drift. A stable, near-linear $\beta_t \approx 1$ would mean the reporting <em>intensity</em> is roughly population-proportional and constant over time; a drifting $\beta_t$ tells us either reporting practices are changing or there's an underlying shift in <em>where</em> cases concentrate.</li>
+<li><strong>Cumulative scaling</strong> — we collapse the entire window into a single (cases, population) pair per geographic unit, fit one regression, and read off the bulk $\beta$. We do this at six geographic levels in parallel — States, Counties, CSAs, all CBSAs, MSAs only, and MicroSAs only — to see how the exponent moves as we change the unit of analysis.</li>
+</ul>
 </div>
 </div>
 </div>
@@ -8795,7 +8871,12 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h5 id="Scaling-of-Cumulative-Yearly-NamUs-Cases-vs-Population-for-Select-Time-Periods:">Scaling of Cumulative Yearly NamUs Cases vs Population for Select Time Periods:<a class="anchor-link" href="#Scaling-of-Cumulative-Yearly-NamUs-Cases-vs-Population-for-Select-Time-Periods:">¶</a></h5>
+<h5 id="Scaling-of-Cumulative-Yearly-NamUs-Cases-vs-Population-for-Select-Time-Periods:">Scaling of Cumulative Yearly NamUs Cases vs Population for Select Time Periods:<a class="anchor-link" href="#Scaling-of-Cumulative-Yearly-NamUs-Cases-vs-Population-for-Select-Time-Periods:">¶</a></h5><p>The cell below produces three figures in succession:</p>
+<ol>
+<li><strong>Cumulative monthly time series</strong> — total NamUs cases as a running sum from 2010 to 2024. The slope of this curve is the <em>reporting rate</em>; visible kinks usually correspond to changes in NamUs intake policy or new state-level participation rather than real shifts in incidence.</li>
+<li><strong>β-vs-year time series</strong> — re-fits the County-level scaling regression <em>cumulatively</em> through year <em>t</em> and plots $\beta_t$ with 95% CI error bars. A flat $\beta$ here means new cases are arriving in proportion to existing population, i.e. NamUs has reached a steady-state geographic distribution.</li>
+<li><strong>Best-vs-worst-fit scatter pair + R² time series</strong> — picks out the years with the highest and lowest in-sample R² and shows both the scatter and the R²(t) curve so we can see when the log-log relationship is tight versus noisy. Early years tend to be noisy (small N, lots of zero-case counties); recent years are tight ($R^2 &gt; 0.5$).</li>
+</ol>
 </div>
 </div>
 </div>
@@ -9103,7 +9184,8 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h5 id="Scaling-of-Total-NamUs-over-Select-Time-Periods-vs-Population:">Scaling of Total NamUs over Select Time Periods vs Population:<a class="anchor-link" href="#Scaling-of-Total-NamUs-over-Select-Time-Periods-vs-Population:">¶</a></h5>
+<h5 id="Scaling-of-Total-NamUs-over-Select-Time-Periods-vs-Population:">Scaling of Total NamUs over Select Time Periods vs Population:<a class="anchor-link" href="#Scaling-of-Total-NamUs-over-Select-Time-Periods-vs-Population:">¶</a></h5><p>This is the <strong>cumulative</strong> scaling regression — we collapse all cases in the chosen window (here, 2010–2024) down to one (cases, population) pair per CBSA and fit one log–log line. Three panels are produced: <strong>All CBSAs</strong>, <strong>MSAs only</strong>, and <strong>MicroSAs only</strong>, so we can see whether the bulk exponent changes when we restrict to larger urban cores versus smaller ones.</p>
+<p>What we expect, and roughly what we observe: $\beta$ sits a bit below 1 (sublinear) for All CBSAs and MSAs alone, meaning bigger metros report proportionally <em>fewer</em> cases per capita than smaller ones. For MicroSAs the fit gets noisier — partly because the dynamic range in population is much narrower (10k–50k cores), partly because reporting from rural-adjacent micro-areas to NamUs is more uneven. The full six-panel version (States / Counties / CSAs / All CBSAs / MSAs / MicroSAs) lives in <code>plots/regressions/cumulative/</code> for each of the three windows (1969–2024, 2000–2024, 2010–2024).</p>
 </div>
 </div>
 </div>
@@ -9222,7 +9304,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Demographic-Plots:">Demographic Plots:<a class="anchor-link" href="#Demographic-Plots:">¶</a></h3>
+<h3 id="Demographic-Plots:">Demographic Plots:<a class="anchor-link" href="#Demographic-Plots:">¶</a></h3><p>The demographic block answers the <em>who</em> and <em>where</em> questions that the scaling regressions don't: what CBSA types absorb most of the case mass, where cases concentrate geographically, and how the demographic mix of victims (sex, age, ethnicity) looks once you condition on a reporting-window.</p>
 </div>
 </div>
 </div>
@@ -9233,7 +9315,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="CBSA-Type-Distribution:">CBSA Type Distribution:<a class="anchor-link" href="#CBSA-Type-Distribution:">¶</a></h4>
+<h4 id="CBSA-Type-Distribution:">CBSA Type Distribution:<a class="anchor-link" href="#CBSA-Type-Distribution:">¶</a></h4><p>A bar chart of the count of NamUs cases broken down by CBSA type (<code>MSA</code> vs <code>MicroSA</code> vs <code>None</code> for counties that don't belong to any CBSA). The point of this figure is to sanity-check the universe before we partition it: are we regressing on a balanced split between metropolitan and micropolitan cases, or is the data overwhelmingly one or the other? The answer matters for how much weight to put on the MicroSA-only panels of the scaling regression — if MicroSAs only carry ~10% of cases, a noisy fit there is partly a small-sample story.</p>
 </div>
 </div>
 </div>
@@ -9335,7 +9417,8 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="Choropleth-Plots:">Choropleth Plots:<a class="anchor-link" href="#Choropleth-Plots:">¶</a></h4>
+<h4 id="Choropleth-Plots:">Choropleth Plots:<a class="anchor-link" href="#Choropleth-Plots:">¶</a></h4><p>Two choropleths of cumulative NamUs cases over 2010–2024 — one at the <strong>county</strong> level and one at the <strong>state</strong> level, both on a log color scale so that the heavy-tailed distribution of cases doesn't crush the low-case counties to a single shade. We deliberately exclude Alaska, Hawaii, and Puerto Rico (state FIPS 02, 15, 72) so the visual stays focused on the continental U.S. — AK and HI distort the bounding box, and PR doesn't have a SEER population panel.</p>
+<p>The county-level map is where the <em>spatial</em> story shows up most cleanly: a roughly linear gradient with population, plus visible concentrations along the Mexican border, the I-5 corridor, the I-10 corridor, and the Eastern Seaboard. The state-level map is mostly a population map by design.</p>
 </div>
 </div>
 </div>
@@ -9561,7 +9644,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="Pi-Charts:">Pi Charts:<a class="anchor-link" href="#Pi-Charts:">¶</a></h4>
+<h4 id="Pie-Charts:">Pie Charts:<a class="anchor-link" href="#Pie-Charts:">¶</a></h4><p>Sex distribution of NamUs cases over 2010–2024 as a simple pie. Two things to flag before reading it: (1) NamUs only records <em>sex</em> as reported by the agency filing the case, so it's binary in the data even though the underlying population obviously isn't; (2) we drop records where Sex is <code>MISSING</code>/<code>UNKNOWN</code>/<code>CENSORED</code> <em>before</em> computing percentages, so the chart shows the conditional distribution among records with a usable sex field.</p>
 </div>
 </div>
 </div>
@@ -9634,7 +9717,9 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="Population-Pyraminds:">Population Pyraminds:<a class="anchor-link" href="#Population-Pyraminds:">¶</a></h4>
+<h4 id="Population-Pyramids:">Population Pyramids:<a class="anchor-link" href="#Population-Pyramids:">¶</a></h4><p>A standard age × sex pyramid of cumulative NamUs cases [1969–2024]. The age bins are <em>non-uniform</em> on purpose — they mirror standard Census age-group cuts in the low and high tails (Under 5, 5–9, 10–14, 15–17, 18–19, 20, 21, ..., 85+) so we can compare the shape against published Census pyramids without rebinning.</p>
+<p>One non-trivial detail in the code below: NamUs reports <code>CurrentMinAge</code> and <code>CurrentMaxAge</code> rather than a single age, since for unsolved cases the subject's <em>current</em> age is an interval (they were N at disappearance, the case is still open T years later, so their current age is somewhere in <code>[N + T_lower, N + T_upper]</code>). To handle that we expand each record into every age bin that <em>overlaps</em> <code>[CurrentMinAge, CurrentMaxAge]</code> — i.e. a record with current age 22–26 contributes to both the 22–24 bin and the 25–29 bin. That overcounts slightly but it's the only way to preserve the interval uncertainty without dropping records.</p>
+<p>Worth keeping in mind that the pyramid is over the subject's <strong>current age</strong>, <em>not</em> their age at disappearance. A case from the 1970s whose subject is still missing ages along with the case, which is why the cumulative pyramid has a substantial middle-aged and older population that wouldn't appear if we had aggregated by age-at-incidence (as the Mexico INEGI demographics do further down). Modal bracket here is in the 40–59 range, with N = 23,674 usable records out of the 25,532 total.</p>
 </div>
 </div>
 </div>
@@ -9768,7 +9853,8 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h4 id="Bar-Charts-of-Ethnicity/Race-Distribution:">Bar Charts of Ethnicity/Race Distribution:<a class="anchor-link" href="#Bar-Charts-of-Ethnicity/Race-Distribution:">¶</a></h4>
+<h4 id="Bar-Charts-of-Ethnicity/Race-Distribution:">Bar Charts of Ethnicity/Race Distribution:<a class="anchor-link" href="#Bar-Charts-of-Ethnicity/Race-Distribution:">¶</a></h4><p>Horizontal bar chart of the ethnicity distribution among NamUs cases with a usable <code>Ethnicity</code> field. Two things to be aware of when reading this: (1) NamUs's <code>primaryEthnicity</code> is a single field reported by the filing agency, so cases of mixed-ethnicity subjects collapse to whichever ethnicity the agency picked; (2) categories with &lt; 3% of total cases are grouped into "Other" so that the long tail of rarely-reported labels doesn't dominate the y-axis.</p>
+<p>The chart serves mostly as a <em>baseline</em> for further analysis — comparing the NamUs ethnicity mix against the underlying U.S. census ethnicity mix is what tells you whether any group is <em>over</em>- or <em>under</em>-represented in the missing persons population.</p>
 </div>
 </div>
 </div>
@@ -9873,7 +9959,7 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="Mexico-INEGI-Visuals:">Mexico INEGI Visuals:<a class="anchor-link" href="#Mexico-INEGI-Visuals:">¶</a></h2>
+<h2 id="Mexico-INEGI-Visuals:">Mexico INEGI Visuals:<a class="anchor-link" href="#Mexico-INEGI-Visuals:">¶</a></h2><p>The Mexico-side visualizations are deliberately narrower than the U.S. side because of the missingness diagnosed earlier — we don't trust year-resolved or municipality-resolved aggregates, but the cumulative state-level signal and the (cumulative) demographic breakdowns are well-supported. Three figures here: a per-100k rate over the last 20 years (preferring <code>DATE_OF_INCIDENCE</code> and falling back to <code>DATE_OF_REPORT</code> to maximize coverage), a cumulative state-level log-log scaling regression, and the sex + age-at-incidence demographic plots.</p>
 </div>
 </div>
 </div>
@@ -9884,7 +9970,8 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="Scaling-per-100k-%5B2006-2025%5D:">Scaling per 100k [2006-2025]:<a class="anchor-link" href="#Scaling-per-100k-%5B2006-2025%5D:">¶</a></h3>
+<h3 id="Scaling-per-100k-%5B2006-2025%5D:">Scaling per 100k [2006-2025]:<a class="anchor-link" href="#Scaling-per-100k-%5B2006-2025%5D:">¶</a></h3><p>The cell below is a lightly-modified version of the <code>@lapanquecita</code> Plotly script that comes with the figshare dataset — it computes the yearly <em>rate</em> of missing persons per 100,000 inhabitants for a given Mexican state (state_id = 0 for the national total) over the most recent 20 years. To beat back the date-missingness we prefer <code>DATE_OF_INCIDENCE</code> and fall back to <code>DATE_OF_REPORT</code> whenever the incidence date is blank, which recovers most records that would otherwise be excluded.</p>
+<p>This is the most readable view of the Mexican crisis at the national level: the per-100k rate sits at <strong>0.16 in 2006</strong>, climbs to <strong>3.08 by 2010</strong>, and reaches <strong>5.89 in 2024</strong> — a ~37× increase across the window. The cumulative total over 2006–2025 is <strong>77,249 actively-missing cases</strong> (excluding confidential records). The visible step-up in 2010 corresponds to the years following the start of the Mexican drug war's most violent phase, and the curve has not returned to pre-2010 levels in any subsequent year.</p>
 </div>
 </div>
 </div>
@@ -10149,7 +10236,12 @@ a.anchor-link {
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="INEGI-Age-&amp;-Sex-Demographic-Plots:">INEGI Age &amp; Sex Demographic Plots:<a class="anchor-link" href="#INEGI-Age-&amp;-Sex-Demographic-Plots:">¶</a></h3>
+<h3 id="INEGI-Age-&amp;-Sex-Demographic-Plots:">INEGI Age &amp; Sex Demographic Plots:<a class="anchor-link" href="#INEGI-Age-&amp;-Sex-Demographic-Plots:">¶</a></h3><p>The INEGI demographic block mirrors the NamUs one — a sex distribution pie and an age-at-incidence bar chart. Two caveats worth flagging <em>before</em> reading these:</p>
+<ul>
+<li><strong>Sex</strong> is <code>MISSING</code> / <code>CONFIDENTIAL</code> for ~37% of records, so the pie shows all four states (MISSING, CONFIDENTIAL, MALE, FEMALE) rather than collapsing them — that way the chart honestly shows how much of the data is missing rather than pretending the conditional distribution among reported cases is the same as the overall distribution.</li>
+<li><strong>Age at incidence</strong> is computed as <code>(DATE_OF_INCIDENCE - DATE_OF_BIRTH) / 365</code>, so the histogram only counts records that have <em>both</em> dates. Given that <code>DATE_OF_BIRTH</code> is 59% missing and <code>DATE_OF_INCIDENCE</code> is 43% missing, the usable sample for this plot is much smaller than the 129,830 total — closer to ~30k records.</li>
+</ul>
+<p>What's striking even with that loss: the modal age bracket is <strong>20–29</strong>, with a long tail into the 30s and 40s and a non-trivial cluster in the 10–19 bracket. The young-adult skew is the same shape we see in the NamUs population pyramid, which suggests the demographics-of-disappearance are remarkably consistent across the two countries even when the <em>scale</em> and the <em>cause</em> are very different.</p>
 </div>
 </div>
 </div>
@@ -10263,6 +10355,28 @@ a.anchor-link {
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=3a069aad">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="Results-&amp;-Discussion:">Results &amp; Discussion:<a class="anchor-link" href="#Results-&amp;-Discussion:">¶</a></h1><p>Pulling the figures together, three findings worth flagging:</p>
+<ul>
+<li><strong>U.S. cumulative scaling is sublinear-to-near-linear at every aggregation level.</strong> Across States, Counties, CSAs, and CBSAs over 1969–2024, $\beta$ sits in a narrow band roughly between <strong>0.75 and 1.0</strong>, with the tightest fits ($R^2 &gt; 0.85$) at the State and CSA levels. The interpretation: at the bulk level, U.S. missing persons cases scale almost-but-not-quite linearly with population — bigger places report proportionally <em>slightly fewer</em> cases per capita than smaller ones. That mild sublinearity contrasts with the <em>superlinear</em> scaling typically reported for violent crime in the urban scaling literature, and is more consistent with what one would expect from a <em>reporting-driven</em> signal: small jurisdictions are more likely to flag a long-term missing person to NamUs (whose mandate is unidentified persons and unresolved cases), while large jurisdictions resolve more cases in-house through local databases.</li>
+<li><strong>The temporal $\beta(t)$ for U.S. states is stable but slowly drifting downward</strong> over 1969–2024, with year-over-year confidence intervals that widen markedly in the pre-1990 era (sparse N) and narrow after ~2000. This is consistent with a NamUs database that has <em>roughly</em> reached a steady-state geographic distribution since the 2010s, with small annual drift attributable to changing state participation rather than real shifts in disappearance rates. The $R^2(t)$ curve confirms this: post-2005 fits are uniformly tight, pre-2000 fits scatter.</li>
+<li><strong>Mexico's per-100k rate has risen by a factor of ~37 in twenty years.</strong> The national rate climbs from 0.16 per 100,000 in 2006 to 5.89 per 100,000 in 2024, with a clear step-up after 2009. The cumulative state-level scaling exponent is $\beta_{MX} \approx 1.11$ with 95% CI $[0.66, 1.57]$ and $R^2 = 0.455$ — the point estimate is mildly <strong>superlinear</strong> but the CI doesn't exclude 1, so taken alone it's not strong evidence against per-capita scaling. The more striking finding is the <em>sign</em> of the point estimate combined with Mexico's runaway per-100k rate: even if $\beta_{MX} \approx 1$, the <em>intercept</em> $\gamma$ is climbing rapidly year-over-year, which is the formal signature of a country in the middle of an active crisis rather than a stable reporting regime.</li>
+</ul>
+<h3 id="Caveats:">Caveats:<a class="anchor-link" href="#Caveats:">¶</a></h3><ul>
+<li><strong>Reporting vs. incidence.</strong> Both NamUs and INEGI count <em>reports</em>, not the true underlying incidence of disappearance. A jurisdiction that doesn't file to NamUs simply doesn't appear in our denominator; a Mexican state that suppresses or delays reporting will show artificially low rates. This is the fundamental limit on causal inference from this data.</li>
+<li><strong>Mexico's missingness budget.</strong> As noted at the top, ~43% of INEGI rows are missing <code>DATE_OF_INCIDENCE</code> and ~41% are missing <code>MUNICIPALITY</code>. We compensate by restricting Mexico analyses to cumulative state-level aggregates, which the data <em>can</em> support, but any year-resolved or municipality-resolved Mexican analysis should be treated with skepticism.</li>
+<li><strong>NamUs's coverage gap.</strong> NamUs is a <em>voluntary</em> federal database — state participation varies, and many cases that are listed in NCIC never make it to NamUs. The 25,532-case count we work with is therefore a lower bound on the true U.S. missing persons population.</li>
+</ul>
+<h3 id="Significance:">Significance:<a class="anchor-link" href="#Significance:">¶</a></h3><p>Even with the caveats above, the scaling exponents quantify something that's otherwise only argued qualitatively: that the <em>shape</em> of the missing persons problem differs structurally between a country with a stable reporting regime (the U.S., where bigger places report slightly fewer cases per capita) and one in the middle of an active crisis (Mexico, where the per-100k rate is climbing at a near-exponential pace and where state-level totals scale at or above linearly with population). A scaling regression on (cases, population) is one of the few quantitative fingerprints of that crisis you can extract from a heavily redacted dataset, and it can in principle be re-run on any country with state-level case counts and population estimates.</p>
 </div>
 </div>
 </div>
