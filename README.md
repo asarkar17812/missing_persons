@@ -26,12 +26,13 @@ Read on for the figures, the methodology, the caveats, and the data sources. The
 7. [Deeper look — Mexico (INEGI)](#deeper-look--mexico-inegi)
 8. [Comparison: U.S. vs Mexico](#comparison-us-vs-mexico)
 9. [Caveats & limitations](#caveats--limitations)
-10. [Significance & future directions](#significance--future-directions)
-11. [Methodology summary](#methodology-summary)
-12. [Repository layout](#repository-layout)
-13. [Reproducing the pipeline](#reproducing-the-pipeline)
-14. [Data sources](#data-sources)
-15. [Acknowledgments](#acknowledgments)
+10. [Surveillance, reporting bias, and what the data doesn't show](#surveillance-reporting-bias-and-what-the-data-doesnt-show)
+11. [Significance & future directions](#significance--future-directions)
+12. [Methodology summary](#methodology-summary)
+13. [Repository layout](#repository-layout)
+14. [Reproducing the pipeline](#reproducing-the-pipeline)
+15. [Data sources](#data-sources)
+16. [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -362,6 +363,54 @@ If you wanted a single number to summarize the comparison, it would be the *rati
 
 ---
 
+## Surveillance, reporting bias, and what the data doesn't show
+
+Every figure and every regression coefficient in this README sits on top of one uncomfortable foundational fact: **we are not measuring missing-persons incidence, we are measuring missing-persons reporting**, and the gap between the two is large, non-random, and unevenly distributed across demographics. The caveats above flag this in the abstract; this section makes the specific channels concrete, because they're load-bearing for how the results should be read.
+
+### 1. Reporting is a layered filter
+
+A person disappears → a family or friend notices and decides whether to report → the local agency files a missing-persons report → the report (in the U.S.) is eligible to be uploaded to NamUs by a participating agency → the report (in Mexico) is eligible to be registered in RNPDNO unless the state authority redacts it. Every arrow above is a place where a real disappearance can fall out of the dataset. Some examples of who falls through which arrow:
+
+- **People whose disappearance is never reported at all.** Unhoused individuals, undocumented migrants, runaway foster youth, people with severe mental illness, victims of human trafficking — populations where there is no stable household to register a report in the first place. None of these cases appear in *either* NamUs or RNPDNO. The "true" missing-persons count is therefore a strict upper bound on what either dataset can measure, and the gap is widest for the most marginalized populations.
+- **Cases reported locally but never escalated to NamUs.** NamUs participation in the U.S. is *voluntary*. As of writing, some states (most notably Tennessee, which historically refused to share NCIC data) participate far less than others; rural agencies often lack the staffing to manage NamUs entry; and many missing-adult cases are closed locally without ever appearing in the federal registry. NamUs is in this sense a *participation-weighted* sample of the underlying NCIC data, not a census.
+- **Cases redacted at the federal level.** In Mexico, roughly **37%** of INEGI records are flagged `CONFIDENTIAL` and have every sensitive field blanked simultaneously. Because the redactions are correlated across columns (see the [missingness correlation heatmap](#missing-value-correlation-heatmap)), this isn't random dropout — it's a deliberate filter applied at the registry level. The conditional distributions we report on sex, age, and date are therefore biased toward whichever cases the Mexican government doesn't redact, and there is no public information on the selection criterion.
+
+### 2. Demographic surveillance bias
+
+Even *within* the cases that make it into the registry, there is well-documented bias in **whose cases get reported, attended to, and resolved**:
+
+- **"Missing white woman syndrome"** is the academic and journalistic term for the long-observed pattern that missing white women — particularly young, photogenic, middle-class women — receive substantially more media coverage, search resources, and law-enforcement attention than missing people of color, missing men, missing trans/nonbinary people, and missing elderly people. The pattern shows up in coverage minutes per case, in NCMEC AMBER Alert escalation, and in the elapsed time between report and resolution. The downstream effect on our data: ethnicity skews and resolution-rate skews in NamUs are partly attributable to *who gets searched for*, not just *who goes missing*.
+- **Indigenous (Native American / Alaska Native / First Nations) missing persons** are dramatically underrepresented in federal databases relative to their population share, even though incidence is dramatically *over*-represented. The Missing and Murdered Indigenous Women (MMIW) movement has documented for over a decade that Indigenous women face a homicide rate ~10× the national average in some U.S. counties, but the corresponding cases rarely appear in NamUs (jurisdictional gaps between tribal, state, and federal police are the proximate cause). Our NamUs ethnicity bar chart understates Indigenous missing persons by a substantial — and unquantifiable — factor.
+- **Black missing persons** show up in NamUs at roughly 1.4× their Census share (19.0% vs. ~13.6%), but the academic literature suggests the *true* over-representation is higher still, because Black missing-adult cases are disproportionately resolved locally without NamUs escalation. Hispanic / Latino cases appear at roughly Census-proportional rates in NamUs (21.0% vs. ~19%), but the qualitative literature suggests undocumented missing persons of all backgrounds are systematically missing from the registry.
+- **Sex/gender** is recorded as a binary in both NamUs and INEGI. There is no consistent way to count missing trans or nonbinary individuals, and several advocacy reports document that trans missing persons are often misclassified by reporting agencies — so even if the field existed, the data would be unreliable.
+
+### 3. Surveillance asymmetries between countries
+
+Reporting bias also looks different on the two sides of the U.S./Mexico comparison, in ways that matter for how the scaling exponents should be read:
+
+- **In the U.S.**, the dominant bias is *under-reporting at the local level* and *non-participation at the state level*. NamUs's voluntary structure means the dataset is what a NamUs analyst once called "a flashlight pointed wherever the states want to point it." The sublinear β we observe (≈0.75–1.0) is partly a real signal — large jurisdictions probably do resolve more cases locally — and partly an artifact of which agencies choose to participate. We can't separate the two with the data we have.
+- **In Mexico**, the dominant bias is *redaction at the federal level* and *systematic under-counting in states with active organized-crime activity*. The MNDM and WOLA advocacy literature argues that the true incidence in states like Tamaulipas, Michoacán, and Guerrero is materially higher than RNPDNO suggests — sometimes by multiples. Combined with the ~37% CONFIDENTIAL overlay, the Mexican β estimate (≈1.11, CI [0.66, 1.57]) is almost certainly a *lower-bound* estimate of the true superlinearity. If we could observe the redacted records, the point estimate would shift further above 1.
+
+### 4. What this means for the scaling results
+
+Concretely, the headline findings should be read with the following adjustments in mind:
+
+- The U.S. sublinear β is a *reporting-process* result more than a *true-incidence* result. If we somehow had NCIC-level access (the underlying federal-government database NamUs draws from), the U.S. β would likely be closer to 1 and possibly above it, in line with the superlinear scaling typically reported for violent crime.
+- The Mexican superlinear β is *almost certainly an underestimate*. The states that drive the high-leverage upper-right of the scatter (Estado de México, CDMX, Jalisco) are also the states that publish the most complete data. The states that drive the lower-leverage points are disproportionately states with the highest redaction rates.
+- The demographic conditional distributions — the ethnicity bar chart, the sex pie, the age pyramid — should all be read as **conditional on a case making it into the registry**. They are not unbiased estimates of the demographic distribution of *actual* disappearances.
+
+### 5. What the data does, honestly, tell us
+
+The pessimistic reading above shouldn't be mistaken for "the data is useless." The scaling exponents *are* informative about the reporting-system structure of the two countries, and the contrast between them *is* real and meaningful — even if both estimates are biased in known directions. What we measured:
+
+- The U.S. and Mexico differ structurally not just in the magnitude of their missing-persons problems but in the *shape* of how those problems distribute across population.
+- That structural difference is detectable even through layers of surveillance bias, redaction, and reporting gaps — and it consistently points to the U.S. operating in a stable reporting regime and Mexico operating in an active crisis regime.
+- The same machinery can in principle be ported to any country that maintains a sufficiently granular case-level registry, with all the same caveats applying.
+
+But the right framing for the project is this: **we measured the *reported* missing-persons problem in the U.S. and Mexico, and the reported problem is a strict subset of the *actual* missing-persons problem in both countries**. Everything that follows from the data is a statement about the reported subset, not the underlying reality. The data sources we cite ([MNDM, WOLA, IACHR for Mexico; the NamUs official site for the U.S.](#data-sources)) are deliberately weighted toward advocacy and qualitative documentation so that readers have a way to triangulate against the quantitative results.
+
+---
+
 ## Significance & future directions
 
 Even with the caveats above, the scaling exponents quantify something otherwise argued only qualitatively: that the *shape* of the missing persons problem differs structurally between a country with a stable reporting regime and one in the middle of an active crisis. β is one of the few quantitative fingerprints of that crisis you can extract from a heavily-redacted dataset, and the same pipeline could be re-run on any country that maintains a sufficiently granular case-level registry.
@@ -383,6 +432,7 @@ The full methodology is in [`mp.ipynb`](mp.ipynb). At a high level:
 - **U.S. case data** comes from a 07/17/2025 snapshot of the **NamUs** Missing Persons API, scraped via NightOwlRecon's open-source script. After cleaning (tokenizing missing/censored/unknown fields; dropping territories PR, VI, GU, MP; handling Connecticut's 2022 county→planning-region transition; dropping rows whose county fields can't be resolved) we retain **25,532 cases**.
 - **U.S. population data** comes from **SEER's age-adjusted county population estimates** (1969–2022), supplemented with the **Census Bureau's 2024 county-level estimates** for 2023–2024. Unresolved historical FIPS codes are filled via a fallback walk through **NHGIS historical county shapefiles** (2024 → 1900) so retired counties get their historically-correct names.
 - **U.S. crosswalk** comes from the **BLS QCEW County–MSA–CSA Crosswalk**, which we apply in three vintages (≤2003 / 2004–2012 / 2013+) so that historical CBSA/CSA boundaries are respected per year.
+- **Connecticut's 2022 county → planning-region transition** gets its own manual fix. Connecticut spent more than three centuries divided into eight counties (Fairfield, Hartford, Litchfield, Middlesex, New Haven, New London, Tolland, Windham); in 2019 the state petitioned the Census Bureau to retire those counties as a statistical unit, and OMB approved the change effective June 2022. As of vintage 2023 every federal release — Census, BLS, BEA, SEER going forward — replaces the eight counties with **nine "Planning Regions"** (Capitol, Greater Bridgeport, Lower Connecticut River Valley, Naugatuck Valley, Northeast, Northwest Hills, South Central Connecticut, Southeast, Western Connecticut). The counties still exist as legal entities, but they no longer carry any federal statistical weight. The problem for NamUs is that case records from 2023 onward still write the *city* ("HARTFORD", "BRIDGEPORT", etc.) but the *county* field is often blank or stale — meaning those rows either drop out at the merge (no FIPS match) or get assigned to a county that no longer exists in the 2023 crosswalk vintage. Our fix is a manual city → planning-region lookup that covers every Connecticut city appearing in the 07/17/2025 NamUs snapshot with a disappearance year after 2022. The mapping is hand-built rather than algorithmic because the underlying town → planning-region table has edge cases (a few towns straddle planning-region boundaries, and OMB reassigned several between the draft and final delineations), and because the affected case-list is small enough — about 17 cities — that an explicit table is easier to audit than a fuzzy match. The dictionary lives in `scripts/us/data/cleaning/namus_cleaning.py`.
 - **Mexico case data** comes from the **figshare INEGI scrape** (Version 4, 07-02-2025). About **40%** of entries have a missing or censored `Date of Incidence`, which is why there are no year-resolved time-series figures for Mexico — only cumulative state-level ones. Similarly, ~41% of entries have a missing `Municipality`, preventing municipal-level aggregation.
 - **Mexico population data** comes from the **INEGI Población** public download (state-level projections, 2020–2070). The cumulative scaling regression uses 2025 projected populations.
 - **Shapefiles** are NHGIS for the U.S. (historical vintages) and OpenStreetMap-derived for Mexican states.
@@ -505,6 +555,7 @@ Every figure and statistic in this README ultimately traces back to one of the s
 - **Historical County / MSA / CSA Crosswalks (BLS QCEW)** — https://www.bls.gov/cew/classifications/areas/county-msa-csa-crosswalk.htm
 - **Connecticut Town Crosswalks (2023–Present)** — https://data.ct.gov/Local-Government/Connecticut-Towns-Crosswalk-with-Tax-Codes-and-FIP/5hqs-h5c3/about_data
 - **Connecticut FIPS Codes for Planning Regions (AP Elections API)** — https://developer.ap.org/ap-elections-api/docs/CT_FIPS_Codes_forPlanningRegions.htm
+- **OMB Bulletin No. 23-01 — Connecticut Planning Regions** (the OMB document approving the Connecticut counties → planning regions transition) — https://www.whitehouse.gov/wp-content/uploads/2023/06/Bulletin-23-01.pdf
 
 ### Latin American Missing Persons Data
 
@@ -534,6 +585,17 @@ Every figure and statistic in this README ultimately traces back to one of the s
 - **Bettencourt, Lobo, Helbing, Kühnert, West (2007) — *Growth, innovation, scaling, and the pace of life in cities*, PNAS** — https://www.pnas.org/doi/10.1073/pnas.0610172104
 - **Bettencourt (2013) — *The origins of scaling in cities*, Science 340(6139), 1438–1441** — https://www.science.org/doi/10.1126/science.1235823
 - **Bettencourt & West (2010) — *A unified theory of urban living*, Nature 467, 912–913** — https://www.nature.com/articles/467912a
+
+### Surveillance, Reporting Bias & Demographic Disparities
+
+- **Sommers (2016) — *Race and the politics of deservingness: The Jennifer Wilbanks case and the missing white woman syndrome*** — https://doi.org/10.1080/14791420.2016.1227866
+- **Robertson (2024 / Northwestern) — *Missing white woman syndrome and the media coverage of missing-persons cases*** — https://www.northwestern.edu/communication/news/2024/missing-white-woman-syndrome.html
+- **Urban Indian Health Institute — *Missing and Murdered Indigenous Women & Girls* report** — https://www.uihi.org/resources/missing-and-murdered-indigenous-women-girls/
+- **Sovereign Bodies Institute — MMIW database** — https://www.sovereign-bodies.org/mmiw-database
+- **U.S. Department of Justice — *Missing American Indian and Alaska Native Persons* fact sheet** — https://www.justice.gov/tribal/page/file/1502056/dl
+- **Black & Missing Foundation** — https://blackandmissinginc.com/
+- **NCMEC (National Center for Missing & Exploited Children) — NamUs participation tracking & reporting disparities** — https://www.missingkids.org/
+- **NamUs analyst commentary on voluntary participation** — see e.g. *Pew Charitable Trusts: How many Americans are missing? Nobody knows.* (2022) — https://www.pewtrusts.org/en/research-and-analysis/blogs/stateline/2022/07/13/how-many-americans-are-missing-nobody-knows-for-sure
 
 ### Anecdotal / Qualitative Data & Additional Resources
 

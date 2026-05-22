@@ -145,12 +145,36 @@ df_namus['Year'] = df_namus['Year'].astype(int)
 # ---------------------------------------------------------------------------
 # Step 5: Connecticut post-2022 handling.
 #
-# In 2022 Connecticut replaced its eight historical counties with nine
-# "Planning Regions" for federal reporting. NamUs records from 2023 onward
-# still write the city, but the county field is often blank or stale. We
-# manually map the affected post-2022 CT rows from city -> planning-region
-# so they merge cleanly against the 2023 crosswalk in the next pipeline
-# stage (crosswalk_cleaning.py).
+# Background: Connecticut spent more than three centuries divided into eight
+# counties (Fairfield, Hartford, Litchfield, Middlesex, New Haven, New
+# London, Tolland, Windham). In 2019 the state petitioned the Census
+# Bureau to retire those counties as a statistical unit; the Office of
+# Management and Budget approved the change in June 2022, and as of
+# vintage 2023 every federal release (Census, BLS, BEA, SEER going
+# forward) replaces the eight counties with nine "Planning Regions"
+# (Capitol, Greater Bridgeport, Lower Connecticut River Valley, Naugatuck
+# Valley, Northeast, Northwest Hills, South Central Connecticut,
+# Southeast, Western Connecticut). The counties still exist as legal
+# entities -- towns are still incorporated under them -- but they no
+# longer carry any federal statistical weight.
+#
+# The problem for NamUs: case records from 2023 onward still write the
+# city ("HARTFORD", "BRIDGEPORT", etc.) but the county field is often
+# left blank, or worse, still names the legacy county that no longer
+# exists in the population panel. If we leave those rows alone they
+# either drop out at the merge (no FIPS match) or get assigned to a
+# county that doesn't appear in the 2023 crosswalk vintage.
+#
+# The fix: a manual city -> planning-region lookup. The dictionary below
+# enumerates every Connecticut city that appears in the 07/17/2025 NamUs
+# snapshot with a disappearance year > 2022, mapped to the planning
+# region the city now belongs to under the Jul. 2023 BLS crosswalk. The
+# mapping is hand-built rather than algorithmic because the underlying
+# town -> planning-region table has edge cases (a few towns straddle
+# planning-region boundaries, others were re-assigned between draft and
+# final OMB delineations) and because the list is small enough -- ~17
+# affected cities -- that an explicit table is easier to audit than a
+# fuzzy match.
 # ---------------------------------------------------------------------------
 
 connecticut_cities_to_county = {
