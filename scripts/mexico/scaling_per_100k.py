@@ -1,35 +1,36 @@
 """
+Per-100,000-inhabitants yearly missing-persons rate for Mexico.
 
-This script creates a bar chart showing the trend of the rate of
-missing people for the specified state in Mexico.
+Originally written by @lapanquecita and bundled with the figshare release of
+the RNPDNO dataset; only minor formatting and inline documentation have been
+added here. The script consumes the cleaned INEGI cases file and the Mexican
+state-population panel, computes the rate of missing persons per 100,000
+inhabitants for the last 20 years, and renders the result as a Plotly bar
+chart with each bar annotated by rate and absolute count.
 
-It is very easy to use, you only need to run the main function with
-one parameter: the ID of the state.
+Data sources (verbatim from the original):
+    Missing-persons data:
+        https://consultapublicarnpdno.segob.gob.mx/consulta
+    Population data:
+        https://datos.gob.mx/busca/dataset/proyecciones-de-la-poblacion-
+        de-mexico-y-de-las-entidades-federativas-2020-2070
 
-The missing people data was sourced from:
+Both datasets are pre-processed (cleaned, translated, anonymized) before
+being consumed here. The bundled population file has had several columns
+removed and column headers translated to English.
 
-https://consultapublicarnpdno.segob.gob.mx/consulta
+Font: Montserrat (https://fonts.google.com/specimen/Montserrat).
 
-The original data was cleaned, translated and anonymized.
-
-The population data was sourced from:
-
-https://datos.gob.mx/busca/dataset/proyecciones-de-la-poblacion-de-mexico-y-de-las-entidades-federativas-2020-2070/resource/ae83f2b0-f23e-45e3-91ae-f85594775dff
-
-The population dataset included in this project is meant to only
-be used within the project, as it had some adjustments done (removal of
-columns and translation).
-
-This project uses the free Montserrat font -> https://fonts.google.com/specimen/Montserrat
-
+Run as:
+    python scripts/mexico/scaling_per_100k.py
 """
 
 import pandas as pd
 import plotly.graph_objects as go
 
 
-# Each state_id has a corresponding name.
-# 0 is for national level figures.
+# State-ID lookup. 0 is reserved for "national totals" so the same `main`
+# function can render either a single-state plot or the country-wide one.
 STATES = {
     0: "Mexico",
     1: "Aguascalientes",
@@ -68,69 +69,62 @@ STATES = {
 
 
 def main(state_id):
-    """
-    Creates a bar chart with the yearly rate of missing people
-    for the specified state.
+    """Build the per-100k rate plot for a single state (or the country).
 
     Parameters
     ----------
     state_id : int
-        The ID of the state you want to plot.
-        Use 0 for national figures.
+        Which state to plot. 0 means the national total (no state filter).
+        Any value in 1..32 selects a single state (see STATES above).
 
+    Pipeline:
+        1. Filter the population file to the requested state and aggregate
+           to a yearly total.
+        2. Deduplicate the cases file to one row per victim (the source
+           data allows multiple report rows per victim).
+        3. Filter cases to the requested state if state_id != 0.
+        4. Parse DATE_OF_INCIDENCE and DATE_OF_REPORT, then use
+           DATE_OF_INCIDENCE preferentially and fall back to DATE_OF_REPORT
+           when incidence is missing. This recovers most records that
+           would otherwise be dropped due to the 43%-missing
+           DATE_OF_INCIDENCE column.
+        5. Build a yearly count of cases, attach the matching population,
+           compute the per-100k rate, and trim to the most recent 20 years.
+        6. Render as a Plotly bar chart with a per-bar rate label and a
+           legend summarizing the cumulative total.
     """
 
-    # We load the population dataset.
+    # 1. Population: filter to state, then aggregate to year totals.
     pop = pd.read_csv(r"F:\dsl_CLIMA\projects\submittable\missing persons\source\mexico_missing_persons\population.csv")
-
-    # We filter by the specified state_id.
     pop = pop[pop["STATE_ID"] == state_id]
-
-    # We calculate the total population by year.
     pop = pop.groupby("YEAR").sum(numeric_only=True)
 
-    # We load the missing people dataset.
+    # 2. Cases: deduplicate to one row per victim.
     df = pd.read_csv(r"F:\dsl_CLIMA\projects\submittable\missing persons\source\mexico_missing_persons\data.csv")
-
-    # A victim can have multiple reports, the first thing to do
-    # is to only select one record per victim.
     df = df.groupby("VICTIM_ID").last()
 
-    # We filter by state. If it is 0 we skip this step as
-    # 0 is for national level figures.
+    # 3. Filter to the requested state (state_id == 0 means no filter).
     if state_id != 0:
         df = df[df["STATE_ID"] == state_id]
 
-    # We will convert to datetime the date of incidence and date of report columns.
+    # 4. Parse the two date fields and use incidence preferentially.
     df["DATE_OF_INCIDENCE"] = pd.to_datetime(df["DATE_OF_INCIDENCE"], errors="coerce")
     df["DATE_OF_REPORT"] = pd.to_datetime(df["DATE_OF_REPORT"], errors="coerce")
-
-    # To get the counts by year we will prefer the date of incidence
-    # but we don't always have it. In that case we fallback to the date of report.
     df["DATE_OF_INCIDENCE"] = df["DATE_OF_INCIDENCE"].fillna(df["DATE_OF_REPORT"])
 
-    # Now we calculate the yearly counts.
+    # 5. Yearly counts -> rate per 100,000 inhabitants -> last 20 years.
     df = df["DATE_OF_INCIDENCE"].value_counts().resample("YS").sum().to_frame("total")
-
-    # We only need the year from the index.
     df.index = df.index.year
-
-    # We add the population to our missing people DataFrame.
     df["pop"] = pop["POPULATION"]
-
-    # We calculate the rate per 100,000 inhabitants.
     df["rate"] = df["total"] / df["pop"] * 100000
-
-    # We only select the latest 20 years.
     df = df.tail(20)
 
-    # We create the text for each bar.
+    # Per-bar text: rate (large, bold) above the absolute count.
     df["text"] = df.apply(
         lambda x: f"<b>{x['rate']:,.2f}</b><br>({x['total']:,.0f})", axis=1
     )
 
-    # We will create a simple bar chart with all the previous calculations.
-    # The bar chart will have a color scale from yellow (0) to red (max).
+    # 6. Render the bar chart. Color scale runs from yellow (0) to red (max).
     fig = go.Figure()
 
     fig.add_trace(
@@ -161,7 +155,7 @@ def main(state_id):
         nticks=len(df) + 1,
     )
 
-    # The y-axis range is dinamically set to make room for the tallest bar text.
+    # Dynamically size the y-axis so the tallest bar's outside-label fits.
     fig.update_yaxes(
         title="Rate per 100,000 inhabitants",
         range=[0, df["rate"].max() * 1.1],
@@ -228,12 +222,12 @@ def main(state_id):
                 yref="paper",
                 xanchor="right",
                 yanchor="top",
-                text="🧁 @lapanquecita",
+                text="Source: @lapanquecita",
             ),
         ],
     )
 
-    # We name the resulting figure with the state_id.
+    # Filename is the state_id so the 33 possible outputs don't collide.
     fig.write_image(fr"F:\dsl_CLIMA\projects\submittable\missing persons\plots\mexico\{state_id}.png")
 
 

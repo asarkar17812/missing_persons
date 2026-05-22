@@ -1,41 +1,82 @@
+"""
+Temporal scaling regression for U.S. NamUs cases vs. state population.
+
+For each year t from 1969 to 2024, fits a log-log regression
+    log10(cases_t) = gamma_t + beta_t * log10(pop_t)
+using only the cases that occurred in that year, and tracks how the exponent
+beta(t) evolves over time. Three figures are produced:
+
+    plots/regressions/temporal/states/[1969-2024]cumulative_cases.png
+        Cumulative monthly NamUs cases from 1969 onward. The slope is the
+        running reporting rate; visible kinks usually correspond to NamUs
+        intake-policy shifts rather than real disappearance-rate changes.
+
+    plots/regressions/temporal/states/[1969-2024]_regression_ts_states_annual.png
+        beta(t) with 95% CI error bars. A flat curve means the geographic
+        distribution of NamUs reporting has reached a steady state; a
+        drifting curve means it hasn't.
+
+    plots/regressions/temporal/states/[1969-2024]_regression_comparison_ts_states_annual.png
+        Two scatter plots side by side: the worst-R-squared year and the
+        best-R-squared year, so we can see what tight vs. loose fits look
+        like in detail.
+
+    plots/regressions/temporal/states/[1969-2024]_r2_ts_states_annual.png
+        R-squared(t) trace with the best and worst years highlighted.
+
+Cases prior to 1969 are not dropped -- they're carried as a "baseline" count
+that gets added to the cumulative effective total but doesn't enter any
+yearly regression.
+
+Run as:
+    python scripts/us/visualization/regression_ts.py
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
 
-# --- Load data
+
+# ---------------------------------------------------------------------------
+# Load the merged case+population frame and parse dates.
+# Commented-out filters above the index assignment are kept for reference:
+# uncomment one to repeat the regression on MSAs / MicroSAs / CSAs instead
+# of States.
+# ---------------------------------------------------------------------------
 df_primary = pd.read_csv(r'export/mp_term.csv')
 
-# --- Parse and clean the disappearance date
 df_primary['DisappearanceDate'] = pd.to_datetime(df_primary['DisappearanceDate'], errors='coerce')
-# df_primary = df_primary[df_primary['CBSA Type'] == 'MSA'] # ----> .groupby('MSA Code', 'State_pop')
-# df_primary = df_primary[df_primary['CBSA Type'] == 'MicroSA'] # ----> .groupby('MSA Code', 'State_pop')
-# df_primary = df_primary[df_primary['CSA Type'] == 'CSA'] # ----> .groupby('CSA Code', 'CSA_pop')
+# df_primary = df_primary[df_primary['CBSA Type'] == 'MSA']      # alt: MSA-only
+# df_primary = df_primary[df_primary['CBSA Type'] == 'MicroSA']  # alt: MicroSA-only
+# df_primary = df_primary[df_primary['CSA Type'] == 'CSA']       # alt: CSA-only
 
-# --- Set date index and sort
 df_primary = df_primary.set_index('DisappearanceDate').sort_index()
 print(df_primary.isna().sum())
 
-# --- Ensure Year column exists
 df_primary['Year'] = df_primary.index.year
 
-# --- Baseline: all cases before 1969
+# ---------------------------------------------------------------------------
+# Baseline: count of pre-1969 cases. These get folded into the running
+# cumulative total but not into any yearly regression.
+# ---------------------------------------------------------------------------
 baseline_cases = df_primary[df_primary['Year'] < 1969].shape[0]
 print(f"\nBaseline cases prior to 1969: {baseline_cases}")
 
-# --- Resample: monthly counts from 1969–2024 for plotting
+# ---------------------------------------------------------------------------
+# Build the monthly cumulative case count (for the cumulative-cases figure
+# only -- the per-year regression below uses annual counts).
+# ---------------------------------------------------------------------------
 all_months = pd.date_range(start='1969-01-01', end='2024-12-31', freq='MS')
 monthly_counts = df_primary.resample('MS').size().reindex(all_months, fill_value=0)
 cumulative_disappearances = monthly_counts.cumsum()
 
-# --- Filter to plot from 1969 onward
 plot_start = '1969-01-01'
 cumulative_to_plot = cumulative_disappearances[cumulative_disappearances.index >= plot_start]
 
-# --- January data points for markers
+# January-only tick positions so the x-axis stays readable.
 january_points = cumulative_to_plot[cumulative_to_plot.index.month == 1]
 
-# --- Plot cumulative monthly cases (for visualization only)
 plt.figure(figsize=(14, 10))
 plt.plot(cumulative_to_plot.index, cumulative_to_plot.values,
          color='darkgreen', linewidth=2, label='Cumulative NamUS Missing Persons Cases (1969–2024)')
@@ -52,7 +93,13 @@ plt.tight_layout()
 plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]cumulative_cases.png', dpi=1200, bbox_inches='tight')
 plt.show()
 
-# --- Regression: annual new cases
+# ---------------------------------------------------------------------------
+# Per-year state-level regression loop.
+# We fit a fresh OLS in log space for each year t using only cases that
+# occurred in year t, then store beta(t), its 95% CI, gamma(t), R-squared(t),
+# total population that year, total cases that year, and the running
+# effective total of all cases observed so far.
+# ---------------------------------------------------------------------------
 df = df_primary.copy()
 years = list(range(1969, 2025))
 
@@ -65,9 +112,10 @@ total_populations, yearly_cases, effective_total_cases = [], [], []
 running_total_cases = baseline_cases
 
 for year in years:
-    # --- Annual cases only
+    # Subset to this year's cases only.
     df_year = df[df['Year'] == year]
 
+    # Aggregate to (State, State_pop) -> case count.
     grouped = (
         df_year.groupby(['State', 'State_pop'])
         .agg(case_count=('CaseID', 'count'))
@@ -80,6 +128,7 @@ for year in years:
     running_total_cases += yearly_case_sum
 
     if len(grouped) > 1:
+        # Enough states to fit a line. Log10 both axes and run OLS.
         X_log = np.log10(grouped['State_pop'].values)
         y_log = np.log10(grouped['case_count'].values)
         X_log_const = sm.add_constant(X_log)
@@ -94,7 +143,8 @@ for year in years:
 
         total_pop = grouped['State_pop'].sum()
 
-        # Store results
+        # Store this year's results. We push the CI as (lower-delta,
+        # upper-delta) so the errorbar plot below can consume it directly.
         intercepts.append(intercept)
         intercept_err_lower.append(intercept - intercept_ci_lower)
         intercept_err_upper.append(intercept_ci_upper - intercept)
@@ -109,7 +159,9 @@ for year in years:
         print(f"{year}: β = {beta:.4f} [{beta_ci_lower:.4f}, {beta_ci_upper:.4f}], "
               f"R² = {r2:.4f}, Yearly Cases = {yearly_case_sum}, Effective Total = {running_total_cases}")
     else:
-        # Not enough data
+        # Not enough states with cases this year to fit a line. Carry NaN
+        # forward so the time series stays year-indexed and visually flags
+        # the gap.
         betas.append(np.nan)
         beta_err_lower.append(np.nan)
         beta_err_upper.append(np.nan)
@@ -124,7 +176,9 @@ for year in years:
 
 years_to_plot = years
 
-# --- Plot β over time
+# ---------------------------------------------------------------------------
+# Plot beta(t) with 95% CI error bars.
+# ---------------------------------------------------------------------------
 y_err = np.array([beta_err_lower, beta_err_upper])
 plt.figure(figsize=(18, 12))
 plt.plot(years_to_plot, betas, color='lightseagreen', linewidth=2, label='β-value Estimate')
@@ -154,7 +208,10 @@ plt.tight_layout()
 plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]_regression_ts_states_annual.png', dpi=1200, bbox_inches='tight')
 plt.show()
 
-# --- Identify best/worst R²
+# ---------------------------------------------------------------------------
+# Identify the best and worst R-squared years (ignoring NaN entries) so we
+# can show the corresponding scatters side by side below.
+# ---------------------------------------------------------------------------
 r2_array = np.array(r2_values)
 valid_r2_indices = np.where(~np.isnan(r2_array))[0]
 best_year_idx = valid_r2_indices[np.argmax(r2_array[valid_r2_indices])]
@@ -162,8 +219,18 @@ worst_year_idx = valid_r2_indices[np.argmin(r2_array[valid_r2_indices])]
 best_year = years_to_plot[best_year_idx]
 worst_year = years_to_plot[worst_year_idx]
 
-# --- Regression scatter plot per year
+
 def plot_regression_scatter(ax, year, df, title_prefix=''):
+    """Draw the (log pop, log cases) scatter and fit for one year.
+
+    Used to show what tight vs. loose annual fits actually look like. Pulls
+    cases that occurred in `year`, aggregates them to (State, State_pop) ->
+    case count, log-transforms both axes, fits OLS, and renders the
+    regression line plus a 95% CI band.
+
+    Falls back to a "Not enough data" title if fewer than two states have
+    cases in `year` (the regression would be undefined).
+    """
     df_year = df[df['Year'] == year]
     grouped = (
         df_year.groupby(['State', 'State_pop'])
@@ -204,6 +271,7 @@ def plot_regression_scatter(ax, year, df, title_prefix=''):
         f"γ = {intercept:.3f}; CI: [{intercept_ci_lower:.3f}, {intercept_ci_upper:.3f}]"
     ), fontsize=14, title_fontsize=16)
 
+
 fig, axes = plt.subplots(1, 2, figsize=(18, 8))
 plot_regression_scatter(axes[0], worst_year, df, title_prefix='Worst Year (Annual): ')
 plot_regression_scatter(axes[1], best_year, df, title_prefix='Best Year (Annual): ')
@@ -211,8 +279,14 @@ plt.tight_layout()
 plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]_regression_comparison_ts_states_annual.png', dpi=1200, bbox_inches='tight')
 plt.show()
 
-# --- R² time series
+
 def plot_r2_timeseries(years, r2_values):
+    """Plot the R-squared(t) curve with the best and worst years highlighted.
+
+    Complement to the beta(t) plot above -- a low R-squared in a year
+    typically indicates that a small number of high-leverage states
+    (California, Texas, Florida) are dominating that year's fit.
+    """
     r2_array = np.array(r2_values)
     plt.figure(figsize=(14, 6))
     plt.plot(years, r2_array, marker='o', color='darkgreen', linewidth=3.5, label=r'$R^2$ value')
@@ -232,5 +306,6 @@ def plot_r2_timeseries(years, r2_values):
     plt.tight_layout()
     plt.savefig(r'/Users/ayushsarkar/missing_persons/missing_persons/plots/regressions/temporal/states/[1969-2024]_r2_ts_states_annual.png', dpi=1200, bbox_inches='tight')
     plt.show()
+
 
 plot_r2_timeseries(years, r2_array)
